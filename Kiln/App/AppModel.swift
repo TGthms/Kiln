@@ -100,7 +100,18 @@ final class AppModel: ObservableObject {
     }
 
     var availableDestinations: [Format] {
-        service.destinations(for: runnableItems.map(\.url), mode: mode)
+        let urls: [URL]
+        switch mode {
+        case .combine:
+            urls = runnableItems.map(\.url)
+        case .convert, .compress, .split:
+            if let selected = selectedItem, selected.status != .unsupported {
+                urls = [selected.url]
+            } else {
+                urls = runnableItems.map(\.url)
+            }
+        }
+        return service.destinations(for: urls, mode: mode)
     }
 
     var groupedDestinations: [(FormatFamily, [Format])] {

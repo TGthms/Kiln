@@ -9,15 +9,19 @@ struct InspectorView: View {
             preview
             modePicker
             if model.mode != .compress {
-                formatChips
+                destinationSection
             }
-            presets
-            qualitySlider
-            DisclosureGroup(isExpanded: $advanced) {
-                advancedBlock
-            } label: {
-                Text("inspector.advanced")
-                    .font(.system(size: 13, weight: .semibold))
+            if model.mode == .compress {
+                presets
+                qualitySlider
+            }
+            if model.mode == .compress {
+                DisclosureGroup(isExpanded: $advanced) {
+                    advancedBlock
+                } label: {
+                    Text("inspector.advanced")
+                        .font(.system(size: 13, weight: .semibold))
+                }
             }
             Spacer(minLength: 0)
             runButton
@@ -62,6 +66,22 @@ struct InspectorView: View {
         .pickerStyle(.segmented)
         .onChange(of: model.mode) { _, _ in
             model.reconcileDestination()
+        }
+    }
+
+    private var destinationSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("inspector.destination")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.secondary)
+            if model.groupedDestinations.isEmpty {
+                Text("error.unsupported")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                formatChips
+            }
         }
     }
 

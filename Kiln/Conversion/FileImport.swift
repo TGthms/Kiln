@@ -18,14 +18,64 @@ enum FileImport {
         return dir
     }
 
+    static func isDirectory(_ url: URL) -> Bool {
+        var isDir: ObjCBool = false
+        return FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) && isDir.boolValue
+    }
+
+    static func canonicalize(_ url: URL) -> URL {
+        if url.isFileURL {
+            return url.standardizedFileURL
+        }
+        return URL(fileURLWithPath: url.path).standardizedFileURL
+    }
+
+    /// Finder sometimes hands the parent folder plus `suggestedName` for a single-file drop.
+    /// Keep only that file. An explicit folder drop (name matches the directory) stays a folder.
+    static func narrowToDroppedFile(_ url: URL, suggestedName: String?) -> URL {
+        let url = canonicalize(url)
+        guard isDirectory(url) else { return url }
+        let name = suggestedName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !name.isEmpty else { return url }
+        if url.lastPathComponent.compare(name, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame {
+            return url
+        }
+        let candidate = url.appendingPathComponent(name)
+        if FileManager.default.isReadableFile(atPath: candidate.path), !isDirectory(candidate) {
+            return candidate
+        }
+        return url
+    }
+
+    /// If the batch contains both a file and its parent folder, drop the folder so siblings
+    /// are not imported. Folder-only batches still flatten.
+    static func withoutDirectoryAncestors(_ urls: [URL]) -> [URL] {
+        let canon = urls.map(canonicalize)
+        let files = canon.filter { !isDirectory($0) }
+        guard !files.isEmpty else { return canon }
+        let filePaths = files.map(\.path)
+        let dirs = canon.filter { isDirectory($0) }.filter { dir in
+            let prefix = dir.path.hasSuffix("/") ? dir.path : dir.path + "/"
+            return !filePaths.contains { $0.hasPrefix(prefix) }
+        }
+        var seen = Set<String>()
+        var out: [URL] = []
+        for url in files + dirs {
+            let key = identityKey(for: url)
+            if seen.insert(key).inserted { out.append(url) }
+        }
+        return out
+    }
+
     /// Copy incoming files into `inbox` **now**, while Open/drop/Services scopes are valid.
     /// Never returns an original or scoped URL — only sandbox-owned copies.
+    /// A regular file is one item. Folders flatten only when the URL itself is a directory.
     static func claim(_ urls: [URL], into inbox: URL? = nil, maxDepth: Int = 6, maxCount: Int = 400) -> [URL] {
         let box = inbox ?? defaultInbox()
         try? FileManager.default.createDirectory(at: box, withIntermediateDirectories: true)
         var claimed: [URL] = []
         var seen = Set<String>()
-        var queue: [(URL, Int)] = urls.map { ($0, 0) }
+        var queue: [(URL, Int)] = withoutDirectoryAncestors(urls).map { ($0, 0) }
         var index = 0
         let fm = FileManager.default
         while index < queue.count {
@@ -40,10 +90,9 @@ enum FileImport {
                 if accessed { url.stopAccessingSecurityScopedResource() }
             }
 
-            var isDir: ObjCBool = false
-            guard fm.fileExists(atPath: url.path, isDirectory: &isDir) else { continue }
+            guard fm.fileExists(atPath: url.path) else { continue }
 
-            if isDir.boolValue {
+            if isDirectory(url) {
                 seen.insert(key)
                 guard depth < maxDepth else { continue }
                 let kids = (try? fm.contentsOfDirectory(
@@ -179,17 +228,32 @@ enum FileImport {
 
     /// Resolve an NSItemProvider / pasteboard payload to a file URL. Never throws.
     static func resolveProviderItem(_ item: Any?) -> URL? {
-        if let url = item as? URL { return url }
-        if let url = item as? NSURL { return url as URL }
-        if let data = item as? Data {
-            if let url = URL(dataRepresentation: data, relativeTo: nil) { return url }
-            if let text = String(data: data, encoding: .utf8) {
-                return urlFromText(text)
+        let raw: URL?
+        if let url = item as? URL {
+            raw = url
+        } else if let url = item as? NSURL {
+            raw = url as URL
+        } else if let data = item as? Data {
+            if let url = URL(dataRepresentation: data, relativeTo: nil) {
+                raw = url
+            } else if let text = String(data: data, encoding: .utf8) {
+                raw = urlFromText(text)
+            } else {
+                raw = nil
             }
+        } else if let text = item as? String {
+            raw = urlFromText(text)
+        } else if let text = item as? NSString {
+            raw = urlFromText(text as String)
+        } else {
+            raw = nil
         }
-        if let text = item as? String { return urlFromText(text) }
-        if let text = item as? NSString { return urlFromText(text as String) }
-        return nil
+        guard let raw else { return nil }
+        let url = canonicalize(raw)
+        guard !url.path.isEmpty, url.path != "/", url.lastPathComponent != ".", url.lastPathComponent != ".." else {
+            return nil
+        }
+        return url
     }
 
     static func prepare(

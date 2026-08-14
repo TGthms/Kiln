@@ -136,6 +136,80 @@ final class KilnConversionTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
     }
 
+    func testClaimSingleFileDoesNotPullSiblingsFromParentFolder() throws {
+        let folder = scratch.appendingPathComponent("album")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: fixture("sample.jpg"), to: folder.appendingPathComponent("photo.jpg"))
+        try FileManager.default.copyItem(at: fixture("sample.png"), to: folder.appendingPathComponent("other.png"))
+        try FileManager.default.copyItem(at: fixture("sample.pdf"), to: folder.appendingPathComponent("notes.pdf"))
+        try FileManager.default.copyItem(at: fixture("sample.json"), to: folder.appendingPathComponent("meta.json"))
+        let one = folder.appendingPathComponent("photo.jpg")
+        let inbox = scratch.appendingPathComponent("single-inbox")
+
+        let owned = FileImport.claim([one], into: inbox)
+        XCTAssertEqual(owned.count, 1, "one file must not enqueue siblings in the parent folder")
+        XCTAssertEqual(owned[0].lastPathComponent, "photo.jpg")
+        XCTAssertEqual(service.identify(url: owned[0])?.id, "jpeg")
+
+        let prepared = FileImport.ingest(
+            urls: [one],
+            already: [],
+            inbox: scratch.appendingPathComponent("ingest-inbox"),
+            identify: { service.identify(url: $0) }
+        )
+        XCTAssertEqual(prepared.count, 1)
+        XCTAssertEqual(prepared[0].format?.id, "jpeg")
+
+        let dests = service.destinations(for: owned, mode: .convert)
+        XCTAssertFalse(dests.isEmpty, "Convert must offer format targets after a single-file import")
+        XCTAssertFalse(dests.contains(where: { $0.id == "jpeg" }), "same-as-source is not a convert target")
+        XCTAssertTrue(dests.contains(where: { $0.id == "png" }))
+        XCTAssertTrue(
+            ConversionReadiness.canStart(
+                runnableCount: owned.count,
+                destinationID: dests.first?.id,
+                mode: .convert,
+                isRunning: false
+            )
+        )
+
+        let narrowed = FileImport.narrowToDroppedFile(folder, suggestedName: "photo.jpg")
+        XCTAssertEqual(narrowed.lastPathComponent, "photo.jpg")
+        XCTAssertFalse(FileImport.isDirectory(narrowed))
+        let fromParentHint = FileImport.claim([narrowed], into: scratch.appendingPathComponent("hint-inbox"))
+        XCTAssertEqual(fromParentHint.count, 1)
+        XCTAssertEqual(fromParentHint[0].lastPathComponent, "photo.jpg")
+
+        let collapsed = FileImport.withoutDirectoryAncestors([folder, one])
+        XCTAssertEqual(collapsed.count, 1)
+        XCTAssertEqual(collapsed[0].lastPathComponent, "photo.jpg")
+        let claimedCollapsed = FileImport.claim([folder, one], into: scratch.appendingPathComponent("collapse-inbox"))
+        XCTAssertEqual(claimedCollapsed.count, 1)
+
+        let folderDrop = FileImport.claim([folder], into: scratch.appendingPathComponent("folder-inbox"))
+        XCTAssertEqual(folderDrop.count, 4, "explicit folder drop still flattens")
+    }
+
+    func testConvertAfterSingleFileImportWritesNewFormat() throws {
+        let folder = scratch.appendingPathComponent("src")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let original = folder.appendingPathComponent("photo.jpg")
+        try FileManager.default.copyItem(at: fixture("sample.jpg"), to: original)
+        let before = try checksum(original)
+        let owned = FileImport.claim([original], into: scratch.appendingPathComponent("convert-inbox"))
+        XCTAssertEqual(owned.count, 1)
+        let dests = service.destinations(for: owned, mode: .convert)
+        let png = try XCTUnwrap(dests.first(where: { $0.id == "png" }))
+        XCTAssertNotEqual(png.id, "jpeg")
+        let spec = OutputSpec(mode: .convert, formatID: png.id, destinationDirectory: scratch)
+        let out = try service.convert(input: owned[0], to: png.id, spec: spec)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: out.path))
+        XCTAssertTrue(isPNG(out))
+        XCTAssertEqual(try checksum(original), before, "original must not be overwritten")
+        XCTAssertNotEqual(out.standardizedFileURL.path, original.standardizedFileURL.path)
+        XCTAssertNotEqual(out.standardizedFileURL.path, owned[0].standardizedFileURL.path)
+    }
+
     func testShippedImportAcceptsFixturesWithoutCrashing() throws {
         let png = fixture("sample.png")
         let jpg = fixture("sample.jpg")

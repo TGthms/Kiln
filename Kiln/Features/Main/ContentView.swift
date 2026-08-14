@@ -121,17 +121,45 @@ enum DropImport {
     static func enqueue(_ providers: [NSItemProvider], onMain: @escaping @MainActor ([URL]) -> Void) {
         let inbox = FileImport.defaultInbox()
         for provider in providers {
-            let type = [UTType.fileURL.identifier, "public.file-url"]
-                .first { provider.hasItemConformingToTypeIdentifier($0) }
-                ?? UTType.fileURL.identifier
-            provider.loadItem(forTypeIdentifier: type, options: nil) { item, _ in
-                guard let url = FileImport.resolveProviderItem(item) else { return }
-                let owned = FileImport.claim([url], into: inbox)
-                guard !owned.isEmpty else { return }
-                Task { @MainActor in
-                    onMain(owned)
-                }
+            deliver(provider, inbox: inbox, onMain: onMain)
+        }
+    }
+
+    private static func deliver(
+        _ provider: NSItemProvider,
+        inbox: URL,
+        onMain: @escaping @MainActor ([URL]) -> Void
+    ) {
+        let suggested = provider.suggestedName
+        let finish: (URL) -> Void = { url in
+            let target = FileImport.narrowToDroppedFile(url, suggestedName: suggested)
+            let owned = FileImport.claim([target], into: inbox)
+            guard !owned.isEmpty else { return }
+            Task { @MainActor in
+                onMain(owned)
             }
+        }
+
+        if provider.canLoadObject(ofClass: URL.self) {
+            _ = provider.loadObject(ofClass: URL.self) { url, _ in
+                if let url {
+                    finish(url)
+                    return
+                }
+                loadItem(provider, finish: finish)
+            }
+            return
+        }
+        loadItem(provider, finish: finish)
+    }
+
+    private static func loadItem(_ provider: NSItemProvider, finish: @escaping (URL) -> Void) {
+        let type = [UTType.fileURL.identifier, "public.file-url"]
+            .first { provider.hasItemConformingToTypeIdentifier($0) }
+            ?? UTType.fileURL.identifier
+        provider.loadItem(forTypeIdentifier: type, options: nil) { item, _ in
+            guard let url = FileImport.resolveProviderItem(item) else { return }
+            finish(url)
         }
     }
 }
