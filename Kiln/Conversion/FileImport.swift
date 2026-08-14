@@ -18,14 +18,116 @@ enum FileImport {
         return dir
     }
 
+    /// Copy incoming files into `inbox` **now**, while Open/drop/Services scopes are valid.
+    /// Never returns an original or scoped URL — only sandbox-owned copies.
+    static func claim(_ urls: [URL], into inbox: URL? = nil, maxDepth: Int = 6, maxCount: Int = 400) -> [URL] {
+        let box = inbox ?? defaultInbox()
+        try? FileManager.default.createDirectory(at: box, withIntermediateDirectories: true)
+        var claimed: [URL] = []
+        var seen = Set<String>()
+        var queue: [(URL, Int)] = urls.map { ($0, 0) }
+        var index = 0
+        let fm = FileManager.default
+        while index < queue.count {
+            if claimed.count >= maxCount { break }
+            let (url, depth) = queue[index]
+            index += 1
+            let key = identityKey(for: url)
+            if seen.contains(key) { continue }
+
+            let accessed = url.startAccessingSecurityScopedResource()
+            defer {
+                if accessed { url.stopAccessingSecurityScopedResource() }
+            }
+
+            var isDir: ObjCBool = false
+            guard fm.fileExists(atPath: url.path, isDirectory: &isDir) else { continue }
+
+            if isDir.boolValue {
+                seen.insert(key)
+                guard depth < maxDepth else { continue }
+                let kids = (try? fm.contentsOfDirectory(
+                    at: url,
+                    includingPropertiesForKeys: [.isRegularFileKey, .isDirectoryKey],
+                    options: [.skipsHiddenFiles]
+                )) ?? []
+                for kid in kids where kid.lastPathComponent != ".DS_Store" {
+                    var kidDir: ObjCBool = false
+                    if fm.fileExists(atPath: kid.path, isDirectory: &kidDir), kidDir.boolValue {
+                        queue.append((kid, depth + 1))
+                    } else {
+                        let kidKey = identityKey(for: kid)
+                        if seen.contains(kidKey) { continue }
+                        seen.insert(kidKey)
+                        if let copy = copyOwned(kid, into: box) {
+                            claimed.append(copy)
+                        }
+                        if claimed.count >= maxCount { break }
+                    }
+                }
+                continue
+            }
+
+            seen.insert(key)
+            if let copy = copyOwned(url, into: box) {
+                claimed.append(copy)
+            }
+        }
+        return claimed
+    }
+
     /// Copy `url` into `inbox` while any security scope is still valid.
-    /// Returns a sandbox-owned file the rest of the app can read later.
+    /// Returns only a sandbox-owned file, or `nil`. Never the original URL.
     static func adoptIncoming(_ url: URL, into inbox: URL) -> URL? {
         let accessed = url.startAccessingSecurityScopedResource()
         defer {
             if accessed { url.stopAccessingSecurityScopedResource() }
         }
+        return copyOwned(url, into: inbox)
+    }
+
+    /// Flatten folders, copy each file into `inbox`, then identify. Callers must
+    /// already have claimed, or `claim` runs here while the URLs are still valid.
+    static func ingest(
+        urls: [URL],
+        already: [URL],
+        inbox: URL,
+        identify: (URL) -> Format?
+    ) -> [(url: URL, format: Format?)] {
+        let owned = claim(urls, into: inbox)
+        return prepare(urls: owned, already: already, identify: identify)
+    }
+
+    /// Sandbox-owned copy only. On any copy failure, return nil — never the original.
+    static func copyOwned(_ url: URL, into inbox: URL) -> URL? {
         try? FileManager.default.createDirectory(at: inbox, withIntermediateDirectories: true)
+        let inboxPath = inbox.standardizedFileURL.path
+        let sourcePath = url.standardizedFileURL.path
+        if sourcePath == inboxPath || sourcePath.hasPrefix(inboxPath + "/") {
+            guard FileManager.default.isReadableFile(atPath: sourcePath) else { return nil }
+            return url.standardizedFileURL
+        }
+        let dest = uniqueInboxURL(for: url, inbox: inbox)
+        do {
+            try FileManager.default.copyItem(at: url, to: dest)
+            guard FileManager.default.isReadableFile(atPath: dest.path) else {
+                try? FileManager.default.removeItem(at: dest)
+                return nil
+            }
+            return dest
+        } catch {
+            do {
+                let data = try Data(contentsOf: url)
+                try data.write(to: dest, options: .atomic)
+                return dest
+            } catch {
+                try? FileManager.default.removeItem(at: dest)
+                return nil
+            }
+        }
+    }
+
+    static func uniqueInboxURL(for url: URL, inbox: URL) -> URL {
         let stem = url.deletingPathExtension().lastPathComponent
         let ext = url.pathExtension
         var dest = inbox.appendingPathComponent(url.lastPathComponent)
@@ -35,32 +137,7 @@ enum FileImport {
             dest = inbox.appendingPathComponent(name)
             n += 1
         }
-        do {
-            try FileManager.default.copyItem(at: url, to: dest)
-            return dest
-        } catch {
-            if FileManager.default.isReadableFile(atPath: url.path) {
-                return url.standardizedFileURL
-            }
-            return nil
-        }
-    }
-
-    /// Flatten folders, copy each file into `inbox`, then identify. Safe after the drop callback returns.
-    static func ingest(
-        urls: [URL],
-        already: [URL],
-        inbox: URL,
-        identify: (URL) -> Format?
-    ) -> [(url: URL, format: Format?)] {
-        let collected = collectFiles(from: urls, already: [])
-        var adopted: [URL] = []
-        for url in collected {
-            if let safe = adoptIncoming(url, into: inbox) {
-                adopted.append(safe)
-            }
-        }
-        return prepare(urls: adopted, already: already, identify: identify)
+        return dest
     }
 
     /// Iterative flatten. Never recurses, so a deep or cyclic folder cannot blow the stack.

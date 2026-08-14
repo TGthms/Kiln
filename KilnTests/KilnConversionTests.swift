@@ -1,5 +1,6 @@
 import XCTest
 import Foundation
+import AppKit
 import PDFKit
 import ImageIO
 import UniformTypeIdentifiers
@@ -172,6 +173,71 @@ final class KilnConversionTests: XCTestCase {
                 isRunning: true
             )
         )
+    }
+
+    /// AppDelegate.application(_:open:), convertWithKiln, browse(), and drop all
+    /// call `FileImport.claim` on the incoming URLs *before* hopping to main.
+    func testOpenWithAndServicesClaimBeforeHopThenIdentify() throws {
+        let png = fixture("sample.png")
+        let jpg = fixture("sample.jpg")
+        let pdf = fixture("sample.pdf")
+        let inbox = scratch.appendingPathComponent("open-inbox")
+        let owned = FileImport.claim([png, jpg, pdf, png], into: inbox)
+        XCTAssertEqual(owned.count, 3)
+        for copy in owned {
+            XCTAssertTrue(copy.path.hasPrefix(inbox.path), "hop must carry inbox copies, not originals")
+            XCTAssertNotEqual(copy.standardizedFileURL.path, png.standardizedFileURL.path)
+            XCTAssertTrue(FileManager.default.isReadableFile(atPath: copy.path))
+        }
+        XCTAssertEqual(service.identify(url: owned[0])?.id, "png")
+        XCTAssertEqual(service.identify(url: owned[1])?.id, "jpeg")
+        XCTAssertEqual(service.identify(url: owned[2])?.id, "pdf")
+        let dests = service.destinations(for: owned, mode: .convert)
+        XCTAssertTrue(
+            ConversionReadiness.canStart(
+                runnableCount: owned.count,
+                destinationID: dests.first?.id,
+                mode: .convert,
+                isRunning: false
+            )
+        )
+    }
+
+    func testAdoptIncomingFailsClosedWhenCopyImpossible() throws {
+        let source = fixture("sample.jpg")
+        let notADirectory = scratch.appendingPathComponent("not-a-dir")
+        try Data("x".utf8).write(to: notADirectory)
+        let result = FileImport.adoptIncoming(source, into: notADirectory)
+        XCTAssertNil(result, "must not hand the original scoped URL to code after the callback")
+        let claimed = FileImport.claim([source], into: notADirectory)
+        XCTAssertTrue(claimed.isEmpty)
+        XCTAssertNil(FileImport.adoptIncoming(scratch.appendingPathComponent("missing.jpg"), into: scratch.appendingPathComponent("inbox")))
+    }
+
+    func testServicesPasteboardClaimThenIdentify() throws {
+        let file = fixture("sample.png")
+        let pboard = NSPasteboard.withUniqueName()
+        pboard.clearContents()
+        XCTAssertTrue(pboard.writeObjects([file as NSURL]))
+        let parsed = ServiceImport.urls(from: pboard)
+        XCTAssertEqual(parsed.map(\.standardizedFileURL.path), [file.standardizedFileURL.path])
+        let inbox = scratch.appendingPathComponent("services-inbox")
+        let owned = FileImport.claim(parsed, into: inbox)
+        XCTAssertEqual(owned.count, 1)
+        XCTAssertTrue(owned[0].path.hasPrefix(inbox.path))
+        XCTAssertEqual(service.identify(url: owned[0])?.id, "png")
+    }
+
+    func testClaimFlattensFolderWhileAccessed() throws {
+        let folder = scratch.appendingPathComponent("open-folder")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: fixture("sample.png"), to: folder.appendingPathComponent("a.png"))
+        try FileManager.default.copyItem(at: fixture("sample.jpg"), to: folder.appendingPathComponent("b.jpg"))
+        let inbox = scratch.appendingPathComponent("folder-inbox")
+        let owned = FileImport.claim([folder], into: inbox)
+        XCTAssertEqual(Set(owned.map(\.lastPathComponent)), ["a.png", "b.jpg"])
+        XCTAssertTrue(owned.allSatisfy { $0.path.hasPrefix(inbox.path) })
+        XCTAssertEqual(service.identify(url: owned.first { $0.pathExtension == "png" }!)?.id, "png")
     }
 
     func testCollectFilesFlattensDirectoryIteratively() throws {

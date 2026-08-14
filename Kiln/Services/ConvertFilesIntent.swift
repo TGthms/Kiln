@@ -10,14 +10,15 @@ struct ConvertFilesIntent: AppIntent {
     var files: [IntentFile]
 
     func perform() async throws -> some IntentResult {
-        let urls = files.compactMap { file -> URL? in
+        let incoming = files.compactMap { file -> URL? in
             if let url = file.fileURL { return url }
             let temp = FileManager.default.temporaryDirectory.appendingPathComponent(file.filename)
             try? file.data.write(to: temp)
             return temp
         }
+        let owned = FileImport.claim(incoming)
         await MainActor.run {
-            AppModel.shared.importURLs(urls)
+            AppModel.shared.importURLs(owned)
         }
         return .result()
     }

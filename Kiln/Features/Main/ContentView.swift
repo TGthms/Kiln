@@ -126,9 +126,10 @@ enum DropImport {
                 ?? UTType.fileURL.identifier
             provider.loadItem(forTypeIdentifier: type, options: nil) { item, _ in
                 guard let url = FileImport.resolveProviderItem(item) else { return }
-                guard let adopted = FileImport.adoptIncoming(url, into: inbox) else { return }
+                let owned = FileImport.claim([url], into: inbox)
+                guard !owned.isEmpty else { return }
                 DispatchQueue.main.async {
-                    onMain([adopted])
+                    onMain(owned)
                 }
             }
         }
