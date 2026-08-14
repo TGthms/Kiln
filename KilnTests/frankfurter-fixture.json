@@ -1,0 +1,6 @@
+[
+  {"date": "2026-08-13", "base": "EUR", "quote": "USD", "rate": 1.10},
+  {"date": "2026-08-13", "base": "EUR", "quote": "GBP", "rate": 0.85},
+  {"date": "2026-08-13", "base": "EUR", "quote": "JPY", "rate": 160.0},
+  {"date": "2026-08-13", "base": "EUR", "quote": "EUR", "rate": 1.0}
+]

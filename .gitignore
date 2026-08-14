@@ -1,0 +1,7 @@
+/build/
+.DS_Store
+xcuserdata
+*.xcuserstate
+*.xcresult
+.idea
+.vscode

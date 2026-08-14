@@ -1,0 +1,170 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXFileReference section */
+		EC8706BF374B661373E7C20B = { isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Kiln.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		50FF9A720EB183D85E0A3ED6 = { isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KilnTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F7B20B3A3D1B548E7785563F = { isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = "Kiln/Resources/Info.plist"; sourceTree = SOURCE_ROOT; };
+		715AED684B5501516DC63B8C = { isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = Kiln.entitlements; path = "Kiln/Resources/Kiln.entitlements"; sourceTree = SOURCE_ROOT; };
+		009C330313E3F0BB238964A3 = { isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = "Kiln/Resources/Assets.xcassets"; sourceTree = SOURCE_ROOT; };
+		0955ED591F6CE6877AED6599 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = "Kiln/App/AppDelegate.swift"; sourceTree = SOURCE_ROOT; };
+		4C4C354D577EC0501141FE27 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppModel.swift; path = "Kiln/App/AppModel.swift"; sourceTree = SOURCE_ROOT; };
+		FEED540C45369F3066B864CE = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppSettings.swift; path = "Kiln/App/AppSettings.swift"; sourceTree = SOURCE_ROOT; };
+		774E763562B1823ECEB86563 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KilnApp.swift; path = "Kiln/App/KilnApp.swift"; sourceTree = SOURCE_ROOT; };
+		FEE7163B30E989C30135946C = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ConversionGraph.swift; path = "Kiln/Conversion/ConversionGraph.swift"; sourceTree = SOURCE_ROOT; };
+		5B91B4A38E937938665FC014 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ConversionService.swift; path = "Kiln/Conversion/ConversionService.swift"; sourceTree = SOURCE_ROOT; };
+		0B964A7F3F5875018E8E919E = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FFmpegProbe.swift; path = "Kiln/Conversion/FFmpegProbe.swift"; sourceTree = SOURCE_ROOT; };
+		1D43004C62B37AF74344CC3A = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FileImport.swift; path = "Kiln/Conversion/FileImport.swift"; sourceTree = SOURCE_ROOT; };
+		95FF8E5BEFE7F21BD3FA3C83 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Format.swift; path = "Kiln/Conversion/Format.swift"; sourceTree = SOURCE_ROOT; };
+		5BAFBCCB6D0EE0099C952C6E = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FormatCatalog.swift; path = "Kiln/Conversion/FormatCatalog.swift"; sourceTree = SOURCE_ROOT; };
+		F44FE8BA40307B90E28AAA18 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OutputLocation.swift; path = "Kiln/Conversion/OutputLocation.swift"; sourceTree = SOURCE_ROOT; };
+		BA7697F56F9A811F69A46E2A = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Theme.swift; path = "Kiln/DesignSystem/Theme.swift"; sourceTree = SOURCE_ROOT; };
+		234F2BC283307E4F9D5C0B67 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ArchiveEngine.swift; path = "Kiln/Engines/ArchiveEngine.swift"; sourceTree = SOURCE_ROOT; };
+		98D2B00E49395B4210C08E4E = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioEngine.swift; path = "Kiln/Engines/AudioEngine.swift"; sourceTree = SOURCE_ROOT; };
+		256F19895F1C6BD4F7EA92E5 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DataEngine.swift; path = "Kiln/Engines/DataEngine.swift"; sourceTree = SOURCE_ROOT; };
+		B456FE6A54E9B675A6E7043B = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FFmpegEngine.swift; path = "Kiln/Engines/FFmpegEngine.swift"; sourceTree = SOURCE_ROOT; };
+		5C40A877672DE51872D24ACA = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ImageEngine.swift; path = "Kiln/Engines/ImageEngine.swift"; sourceTree = SOURCE_ROOT; };
+		856C50C06DC31014A5A8A813 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OfficeEngine.swift; path = "Kiln/Engines/OfficeEngine.swift"; sourceTree = SOURCE_ROOT; };
+		BD6A80DA0285E2C493DC7F97 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PDFEngine.swift; path = "Kiln/Engines/PDFEngine.swift"; sourceTree = SOURCE_ROOT; };
+		A00AD8C4BACF37D0F3BF72DA = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TextEngine.swift; path = "Kiln/Engines/TextEngine.swift"; sourceTree = SOURCE_ROOT; };
+		2EFE1213B72F447B05B27FBC = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VideoEngine.swift; path = "Kiln/Engines/VideoEngine.swift"; sourceTree = SOURCE_ROOT; };
+		1C0C61478602B1B4A6A74BE5 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DropZoneView.swift; path = "Kiln/Features/DropZone/DropZoneView.swift"; sourceTree = SOURCE_ROOT; };
+		E91E107639F69825F6BC98B0 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = InspectorView.swift; path = "Kiln/Features/Inspector/InspectorView.swift"; sourceTree = SOURCE_ROOT; };
+		FAEBEF98961CE53C0F5F4B14 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ContentView.swift; path = "Kiln/Features/Main/ContentView.swift"; sourceTree = SOURCE_ROOT; };
+		857EB57DB17329F384EE5133 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QueueView.swift; path = "Kiln/Features/Queue/QueueView.swift"; sourceTree = SOURCE_ROOT; };
+		BB44D68ABF8AF4A59CF34E2F = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = "Kiln/Features/Settings/SettingsView.swift"; sourceTree = SOURCE_ROOT; };
+		D9CDCC86157B9728DDB4F842 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UnitsView.swift; path = "Kiln/Features/Units/UnitsView.swift"; sourceTree = SOURCE_ROOT; };
+		C6FE1968D5D2BE9CC9F9F8CB = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = L10n.swift; path = "Kiln/Localization/L10n.swift"; sourceTree = SOURCE_ROOT; };
+		D8D6F04CD1C5C0EC1E67CCDD = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Language.swift; path = "Kiln/Localization/Language.swift"; sourceTree = SOURCE_ROOT; };
+		8B18F9036D93F8EB20C0CA73 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ConvertFilesIntent.swift; path = "Kiln/Services/ConvertFilesIntent.swift"; sourceTree = SOURCE_ROOT; };
+		50B2056963E0C7BA8CAB69FE = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QuickLookPreview.swift; path = "Kiln/Services/QuickLookPreview.swift"; sourceTree = SOURCE_ROOT; };
+		3CF1FD9D4FA377EAAA7741EC = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MeasurementEngine.swift; path = "Kiln/Units/MeasurementEngine.swift"; sourceTree = SOURCE_ROOT; };
+		4EFEC5523D556F88CEA2C439 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RateSnapshot.swift; path = "Kiln/Units/RateSnapshot.swift"; sourceTree = SOURCE_ROOT; };
+		B922FEB182550D19A943A70E = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UnitCategory.swift; path = "Kiln/Units/UnitCategory.swift"; sourceTree = SOURCE_ROOT; };
+		FD5D33075DBDE57CA99365B8 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UnitsCatalog.swift; path = "Kiln/Units/UnitsCatalog.swift"; sourceTree = SOURCE_ROOT; };
+		80B62AFA7EBD9161350437E3 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UnitsModel.swift; path = "Kiln/Units/UnitsModel.swift"; sourceTree = SOURCE_ROOT; };
+		2AC9042C8794CA4602AD3462 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KilnConversionTests.swift; path = "KilnTests/KilnConversionTests.swift"; sourceTree = SOURCE_ROOT; };
+		E1A2C9BEB647329913FBC967 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KilnUnitsTests.swift; path = "KilnTests/KilnUnitsTests.swift"; sourceTree = SOURCE_ROOT; };
+		80AE70BC6C9FF2423BAF2C88 = { isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = Localizable.xcstrings; path = "Kiln/Resources/Localizable.xcstrings"; sourceTree = SOURCE_ROOT; };
+		2D224BEF7FD29A8F023A9A28 = { isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = InfoPlist.xcstrings; path = "Kiln/Resources/InfoPlist.xcstrings"; sourceTree = SOURCE_ROOT; };
+		423FF0BAA3AC470416CDE7D3 = { isa = PBXFileReference; lastKnownFileType = image.jpeg; name = sample.jpg; path = "Fixtures/sample.jpg"; sourceTree = SOURCE_ROOT; };
+		80670DCDBEBA04910CE7FD54 = { isa = PBXFileReference; lastKnownFileType = text.json; name = sample.json; path = "Fixtures/sample.json"; sourceTree = SOURCE_ROOT; };
+		2C949D4A348F8B37AC413496 = { isa = PBXFileReference; lastKnownFileType = image.pdf; name = sample.pdf; path = "Fixtures/sample.pdf"; sourceTree = SOURCE_ROOT; };
+		2544773C240CA4A43FE6E6FF = { isa = PBXFileReference; lastKnownFileType = image.png; name = sample.png; path = "Fixtures/sample.png"; sourceTree = SOURCE_ROOT; };
+		060BDE83E205E1AE53FCF1DB = { isa = PBXFileReference; lastKnownFileType = text.json; name = Localizable.catalog.json; path = "KilnTests/Localizable.catalog.json"; sourceTree = SOURCE_ROOT; };
+		E95006BCE36FB51474EC6154 = { isa = PBXFileReference; lastKnownFileType = text.json; name = frankfurter-fixture.json; path = "KilnTests/frankfurter-fixture.json"; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXBuildFile section */
+		E98216A24121EC73EABA4FC6 = { isa = PBXBuildFile; fileRef = 0955ED591F6CE6877AED6599; };
+		4462B6C7D843C49ECD506F1C = { isa = PBXBuildFile; fileRef = 4C4C354D577EC0501141FE27; };
+		6651F2D0D44485725F4B51FA = { isa = PBXBuildFile; fileRef = FEED540C45369F3066B864CE; };
+		8156B5189476A7053A6E7BBD = { isa = PBXBuildFile; fileRef = 774E763562B1823ECEB86563; };
+		B74F61C49B847CD5A6F3D31E = { isa = PBXBuildFile; fileRef = FEE7163B30E989C30135946C; };
+		977925DCE55548472D54DD21 = { isa = PBXBuildFile; fileRef = 5B91B4A38E937938665FC014; };
+		73CA6DB6235DB8CFDF4BFABE = { isa = PBXBuildFile; fileRef = 0B964A7F3F5875018E8E919E; };
+		5CE4689C867C4F860B45C885 = { isa = PBXBuildFile; fileRef = 1D43004C62B37AF74344CC3A; };
+		023E9FFC360F8436C52F5250 = { isa = PBXBuildFile; fileRef = 95FF8E5BEFE7F21BD3FA3C83; };
+		31FF79D061E57FBA609C5992 = { isa = PBXBuildFile; fileRef = 5BAFBCCB6D0EE0099C952C6E; };
+		A1CD32EFA63CE97F09E5C652 = { isa = PBXBuildFile; fileRef = F44FE8BA40307B90E28AAA18; };
+		0AF7FC28F6A98229E70D0FD4 = { isa = PBXBuildFile; fileRef = BA7697F56F9A811F69A46E2A; };
+		C435132DA41FC926AC0AC092 = { isa = PBXBuildFile; fileRef = 234F2BC283307E4F9D5C0B67; };
+		9CB9A4A9543C568CCBBBAA3A = { isa = PBXBuildFile; fileRef = 98D2B00E49395B4210C08E4E; };
+		F6B62B8E9780D996C7FC2935 = { isa = PBXBuildFile; fileRef = 256F19895F1C6BD4F7EA92E5; };
+		FE5EC4F3C36E89FC7E4767D5 = { isa = PBXBuildFile; fileRef = B456FE6A54E9B675A6E7043B; };
+		05DE234378FB066340184303 = { isa = PBXBuildFile; fileRef = 5C40A877672DE51872D24ACA; };
+		D5B9CC238B800DF2C67739BC = { isa = PBXBuildFile; fileRef = 856C50C06DC31014A5A8A813; };
+		AF8C0AD7745AECD999915C52 = { isa = PBXBuildFile; fileRef = BD6A80DA0285E2C493DC7F97; };
+		288B8775C83AA4ACE18ADB99 = { isa = PBXBuildFile; fileRef = A00AD8C4BACF37D0F3BF72DA; };
+		B9C487385610E242A94CFB9B = { isa = PBXBuildFile; fileRef = 2EFE1213B72F447B05B27FBC; };
+		A1B3828ACBCB9AF779C882A8 = { isa = PBXBuildFile; fileRef = 1C0C61478602B1B4A6A74BE5; };
+		208AD5A52C5DD4C13B8DCE9F = { isa = PBXBuildFile; fileRef = E91E107639F69825F6BC98B0; };
+		57CC17735AEB365296CBC12E = { isa = PBXBuildFile; fileRef = FAEBEF98961CE53C0F5F4B14; };
+		6DFCBC25469FC6587B771C20 = { isa = PBXBuildFile; fileRef = 857EB57DB17329F384EE5133; };
+		F052EACBA500F8FA79DEBF75 = { isa = PBXBuildFile; fileRef = BB44D68ABF8AF4A59CF34E2F; };
+		E49A24BA1F246C75BC31975A = { isa = PBXBuildFile; fileRef = D9CDCC86157B9728DDB4F842; };
+		5FA29DF599C1B549F329AB06 = { isa = PBXBuildFile; fileRef = C6FE1968D5D2BE9CC9F9F8CB; };
+		858DA599E98593AC0A889E05 = { isa = PBXBuildFile; fileRef = D8D6F04CD1C5C0EC1E67CCDD; };
+		F63DB90CC9338DAC090A423A = { isa = PBXBuildFile; fileRef = 8B18F9036D93F8EB20C0CA73; };
+		30AA8F3AA4F1030D907CB88F = { isa = PBXBuildFile; fileRef = 50B2056963E0C7BA8CAB69FE; };
+		10D8AA3AD8382BA1EA6422DB = { isa = PBXBuildFile; fileRef = 3CF1FD9D4FA377EAAA7741EC; };
+		A682775FB85178D31CDFC75A = { isa = PBXBuildFile; fileRef = 4EFEC5523D556F88CEA2C439; };
+		0FD1B5D360C787ED3DEB8311 = { isa = PBXBuildFile; fileRef = B922FEB182550D19A943A70E; };
+		6DFBF88300EF03245DD980FC = { isa = PBXBuildFile; fileRef = FD5D33075DBDE57CA99365B8; };
+		30EF2D93ABB26A6F40046ED8 = { isa = PBXBuildFile; fileRef = 80B62AFA7EBD9161350437E3; };
+		D882F4B3FDAE523A0371C834 = { isa = PBXBuildFile; fileRef = 2AC9042C8794CA4602AD3462; };
+		E18F0FE551F369E11D238E13 = { isa = PBXBuildFile; fileRef = E1A2C9BEB647329913FBC967; };
+		41F57B85C2F148889F27160E = { isa = PBXBuildFile; fileRef = 009C330313E3F0BB238964A3; };
+		97059E5ED9435C3F8F22B3F9 = { isa = PBXBuildFile; fileRef = 80AE70BC6C9FF2423BAF2C88; };
+		A670302F67C3E499ADA999C0 = { isa = PBXBuildFile; fileRef = 2D224BEF7FD29A8F023A9A28; };
+		14B56EE919D763AF30F8CC93 = { isa = PBXBuildFile; fileRef = 423FF0BAA3AC470416CDE7D3; };
+		0221143672348B622C579C85 = { isa = PBXBuildFile; fileRef = 80670DCDBEBA04910CE7FD54; };
+		A54B7F89EAC58579818D266B = { isa = PBXBuildFile; fileRef = 2C949D4A348F8B37AC413496; };
+		078F2F408732B488F7A68FA2 = { isa = PBXBuildFile; fileRef = 2544773C240CA4A43FE6E6FF; };
+		63C9BA4BBB3DC12A5BCDD974 = { isa = PBXBuildFile; fileRef = 060BDE83E205E1AE53FCF1DB; };
+		0290F5EA8D1D60908FC8F7B3 = { isa = PBXBuildFile; fileRef = E95006BCE36FB51474EC6154; };
+/* End PBXBuildFile section */
+
+/* Begin PBXGroup section */
+		EC90CD8E34799625C61B91B7 = { isa = PBXGroup; children = ( 0955ED591F6CE6877AED6599, 4C4C354D577EC0501141FE27, FEED540C45369F3066B864CE, 774E763562B1823ECEB86563, FEE7163B30E989C30135946C, 5B91B4A38E937938665FC014, 0B964A7F3F5875018E8E919E, 1D43004C62B37AF74344CC3A, 95FF8E5BEFE7F21BD3FA3C83, 5BAFBCCB6D0EE0099C952C6E, F44FE8BA40307B90E28AAA18, BA7697F56F9A811F69A46E2A, 234F2BC283307E4F9D5C0B67, 98D2B00E49395B4210C08E4E, 256F19895F1C6BD4F7EA92E5, B456FE6A54E9B675A6E7043B, 5C40A877672DE51872D24ACA, 856C50C06DC31014A5A8A813, BD6A80DA0285E2C493DC7F97, A00AD8C4BACF37D0F3BF72DA, 2EFE1213B72F447B05B27FBC, 1C0C61478602B1B4A6A74BE5, E91E107639F69825F6BC98B0, FAEBEF98961CE53C0F5F4B14, 857EB57DB17329F384EE5133, BB44D68ABF8AF4A59CF34E2F, D9CDCC86157B9728DDB4F842, C6FE1968D5D2BE9CC9F9F8CB, D8D6F04CD1C5C0EC1E67CCDD, 8B18F9036D93F8EB20C0CA73, 50B2056963E0C7BA8CAB69FE, 3CF1FD9D4FA377EAAA7741EC, 4EFEC5523D556F88CEA2C439, B922FEB182550D19A943A70E, FD5D33075DBDE57CA99365B8, 80B62AFA7EBD9161350437E3 ); name = Kiln; sourceTree = "<group>"; };
+		117E9BD27ADF14D138FC5BA4 = { isa = PBXGroup; children = ( 2AC9042C8794CA4602AD3462, E1A2C9BEB647329913FBC967 ); name = KilnTests; sourceTree = "<group>"; };
+		452364E2DC8F4302669DEFF3 = { isa = PBXGroup; children = ( F7B20B3A3D1B548E7785563F, 715AED684B5501516DC63B8C, 009C330313E3F0BB238964A3, 80AE70BC6C9FF2423BAF2C88, 2D224BEF7FD29A8F023A9A28, 423FF0BAA3AC470416CDE7D3, 80670DCDBEBA04910CE7FD54, 2C949D4A348F8B37AC413496, 2544773C240CA4A43FE6E6FF, 060BDE83E205E1AE53FCF1DB, E95006BCE36FB51474EC6154 ); name = Resources; sourceTree = "<group>"; };
+		00C45FD35CB0F9C5F764F070 = { isa = PBXGroup; children = ( EC8706BF374B661373E7C20B, 50FF9A720EB183D85E0A3ED6 ); name = Products; sourceTree = "<group>"; };
+		ADCF10F76EBF2A74473E9DC4 = { isa = PBXGroup; children = ( EC90CD8E34799625C61B91B7, 117E9BD27ADF14D138FC5BA4, 452364E2DC8F4302669DEFF3, 00C45FD35CB0F9C5F764F070 ); sourceTree = "<group>"; };
+/* End PBXGroup section */
+
+/* Begin PBXSourcesBuildPhase section */
+		6D2C1523C40DC9FD335FEEAE = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = ( E98216A24121EC73EABA4FC6, 4462B6C7D843C49ECD506F1C, 6651F2D0D44485725F4B51FA, 8156B5189476A7053A6E7BBD, B74F61C49B847CD5A6F3D31E, 977925DCE55548472D54DD21, 73CA6DB6235DB8CFDF4BFABE, 5CE4689C867C4F860B45C885, 023E9FFC360F8436C52F5250, 31FF79D061E57FBA609C5992, A1CD32EFA63CE97F09E5C652, 0AF7FC28F6A98229E70D0FD4, C435132DA41FC926AC0AC092, 9CB9A4A9543C568CCBBBAA3A, F6B62B8E9780D996C7FC2935, FE5EC4F3C36E89FC7E4767D5, 05DE234378FB066340184303, D5B9CC238B800DF2C67739BC, AF8C0AD7745AECD999915C52, 288B8775C83AA4ACE18ADB99, B9C487385610E242A94CFB9B, A1B3828ACBCB9AF779C882A8, 208AD5A52C5DD4C13B8DCE9F, 57CC17735AEB365296CBC12E, 6DFCBC25469FC6587B771C20, F052EACBA500F8FA79DEBF75, E49A24BA1F246C75BC31975A, 5FA29DF599C1B549F329AB06, 858DA599E98593AC0A889E05, F63DB90CC9338DAC090A423A, 30AA8F3AA4F1030D907CB88F, 10D8AA3AD8382BA1EA6422DB, A682775FB85178D31CDFC75A, 0FD1B5D360C787ED3DEB8311, 6DFBF88300EF03245DD980FC, 30EF2D93ABB26A6F40046ED8 ); runOnlyForDeploymentPostprocessing = 0; };
+		970299B23036789C14DCEA38 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = ( D882F4B3FDAE523A0371C834, E18F0FE551F369E11D238E13 ); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXResourcesBuildPhase section */
+		948756E4B49084A627CA0B9A = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = ( 41F57B85C2F148889F27160E, 97059E5ED9435C3F8F22B3F9, A670302F67C3E499ADA999C0 ); runOnlyForDeploymentPostprocessing = 0; };
+		314B4BAD576353C339D84A29 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = ( 14B56EE919D763AF30F8CC93, 0221143672348B622C579C85, A54B7F89EAC58579818D266B, 078F2F408732B488F7A68FA2, 63C9BA4BBB3DC12A5BCDD974, 0290F5EA8D1D60908FC8F7B3 ); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		DC5E72DCDAFA3A0962FBEC53 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = ( ); runOnlyForDeploymentPostprocessing = 0; };
+		96C8A1040BEA52B0A710C717 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = ( ); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		D4172F6E5EBFE002CD5F7DE7 = { isa = XCBuildConfiguration; buildSettings = { CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; COPY_PHASE_STRIP = NO; DEBUG_INFORMATION_FORMAT = dwarf; ENABLE_HARDENED_RUNTIME = YES; ENABLE_TESTABILITY = YES; GCC_DYNAMIC_NO_PIC = NO; GCC_OPTIMIZATION_LEVEL = 0; MACOSX_DEPLOYMENT_TARGET = 15.0; ONLY_ACTIVE_ARCH = YES; SDKROOT = macosx; SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; SWIFT_VERSION = 6.0; SWIFT_STRICT_CONCURRENCY = complete; CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = 7JA9J6994N; ALWAYS_SEARCH_USER_PATHS = NO; CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES; }; name = Debug; };
+		C9CAF956A7C660E6865F2E2E = { isa = XCBuildConfiguration; buildSettings = { CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; COPY_PHASE_STRIP = NO; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; ENABLE_HARDENED_RUNTIME = YES; GCC_OPTIMIZATION_LEVEL = s; MACOSX_DEPLOYMENT_TARGET = 15.0; SDKROOT = macosx; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_OPTIMIZATION_LEVEL = "-O"; SWIFT_VERSION = 6.0; SWIFT_STRICT_CONCURRENCY = complete; CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = 7JA9J6994N; ALWAYS_SEARCH_USER_PATHS = NO; }; name = Release; };
+		440E5A6917A92EC34723EB9D = { isa = XCBuildConfiguration; buildSettings = { ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; CODE_SIGN_ENTITLEMENTS = Kiln/Resources/Kiln.entitlements; COMBINE_HIDPI_IMAGES = YES; CURRENT_PROJECT_VERSION = 1; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Kiln/Resources/Info.plist; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks"; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = app.kiln.mac; PRODUCT_NAME = Kiln; ENABLE_HARDENED_RUNTIME = YES; DEVELOPMENT_TEAM = 7JA9J6994N; CODE_SIGN_STYLE = Automatic; ENABLE_TESTABILITY = YES; ENABLE_PREVIEWS = YES; }; name = Debug; };
+		82FD79508EEAC699C8B01C6C = { isa = XCBuildConfiguration; buildSettings = { ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; CODE_SIGN_ENTITLEMENTS = Kiln/Resources/Kiln.entitlements; COMBINE_HIDPI_IMAGES = YES; CURRENT_PROJECT_VERSION = 1; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Kiln/Resources/Info.plist; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks"; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = app.kiln.mac; PRODUCT_NAME = Kiln; ENABLE_HARDENED_RUNTIME = YES; DEVELOPMENT_TEAM = 7JA9J6994N; CODE_SIGN_STYLE = Automatic; ENABLE_TESTABILITY = YES; ENABLE_PREVIEWS = YES; }; name = Release; };
+		A9EAA93E499DF2C43A46B515 = { isa = XCBuildConfiguration; buildSettings = { BUNDLE_LOADER = "$(TEST_HOST)"; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Kiln.app/Contents/MacOS/Kiln"; GENERATE_INFOPLIST_FILE = YES; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks"; PRODUCT_BUNDLE_IDENTIFIER = app.kiln.mac.tests; PRODUCT_NAME = KilnTests; DEVELOPMENT_TEAM = 7JA9J6994N; CODE_SIGN_STYLE = Automatic; MACOSX_DEPLOYMENT_TARGET = 15.0; }; name = Debug; };
+		34E15607A758B3F33642AC11 = { isa = XCBuildConfiguration; buildSettings = { BUNDLE_LOADER = "$(TEST_HOST)"; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Kiln.app/Contents/MacOS/Kiln"; GENERATE_INFOPLIST_FILE = YES; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks"; PRODUCT_BUNDLE_IDENTIFIER = app.kiln.mac.tests; PRODUCT_NAME = KilnTests; DEVELOPMENT_TEAM = 7JA9J6994N; CODE_SIGN_STYLE = Automatic; MACOSX_DEPLOYMENT_TARGET = 15.0; }; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		6D6194B745F9FCF78E19905D = { isa = XCConfigurationList; buildConfigurations = ( D4172F6E5EBFE002CD5F7DE7, C9CAF956A7C660E6865F2E2E ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
+		8A4C137FDF67CE32F42E0D24 = { isa = XCConfigurationList; buildConfigurations = ( 440E5A6917A92EC34723EB9D, 82FD79508EEAC699C8B01C6C ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
+		CA25E31FA3A46B2171497E0D = { isa = XCConfigurationList; buildConfigurations = ( A9EAA93E499DF2C43A46B515, 34E15607A758B3F33642AC11 ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
+/* End XCConfigurationList section */
+
+/* Begin PBXNativeTarget section */
+		29C7B681C8D62CBAC94D51C0 = { isa = PBXNativeTarget; buildConfigurationList = 8A4C137FDF67CE32F42E0D24; buildPhases = ( 6D2C1523C40DC9FD335FEEAE, DC5E72DCDAFA3A0962FBEC53, 948756E4B49084A627CA0B9A ); buildRules = ( ); dependencies = ( ); name = Kiln; productName = Kiln; productReference = EC8706BF374B661373E7C20B; productType = "com.apple.product-type.application"; };
+		7EC8F98B7A265120217712DE = { isa = PBXNativeTarget; buildConfigurationList = CA25E31FA3A46B2171497E0D; buildPhases = ( 970299B23036789C14DCEA38, 96C8A1040BEA52B0A710C717, 314B4BAD576353C339D84A29 ); buildRules = ( ); dependencies = ( 6D0546F5923B0110C6BB2B63 ); name = KilnTests; productName = KilnTests; productReference = 50FF9A720EB183D85E0A3ED6; productType = "com.apple.product-type.bundle.unit-test"; };
+/* End PBXNativeTarget section */
+
+/* Begin PBXContainerItemProxy section */
+		D36D33020B6BB89396BD1B34 = { isa = PBXContainerItemProxy; containerPortal = 98F54143AB4E86B28C3AFEE0; proxyType = 1; remoteGlobalIDString = 29C7B681C8D62CBAC94D51C0; remoteInfo = Kiln; };
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXTargetDependency section */
+		6D0546F5923B0110C6BB2B63 = { isa = PBXTargetDependency; target = 29C7B681C8D62CBAC94D51C0; targetProxy = D36D33020B6BB89396BD1B34; };
+/* End PBXTargetDependency section */
+
+/* Begin PBXProject section */
+		98F54143AB4E86B28C3AFEE0 = { isa = PBXProject; attributes = { BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 2600; LastUpgradeCheck = 2600; }; buildConfigurationList = 6D6194B745F9FCF78E19905D; compatibilityVersion = "Xcode 15.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = ( en, Base, es, fr, de, it, "pt-BR", "pt-PT", nl, da, sv, nb, fi, pl, cs, hu, ro, el, tr, ru, uk, ar, he, hi, th, vi, id, ja, ko, "zh-Hans", "zh-Hant" ); mainGroup = ADCF10F76EBF2A74473E9DC4; productRefGroup = 00C45FD35CB0F9C5F764F070; projectDirPath = ""; projectRoot = ""; targets = ( 29C7B681C8D62CBAC94D51C0, 7EC8F98B7A265120217712DE ); };
+/* End PBXProject section */
+
+	};
+	rootObject = 98F54143AB4E86B28C3AFEE0;
+}

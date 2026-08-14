@@ -1,0 +1,419 @@
+import XCTest
+import Foundation
+import PDFKit
+import ImageIO
+import UniformTypeIdentifiers
+@testable import Kiln
+
+final class KilnConversionTests: XCTestCase {
+    var scratch: URL!
+    let service = ConversionService()
+
+    override func setUpWithError() throws {
+        scratch = FileManager.default.temporaryDirectory.appendingPathComponent("kiln-tests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true)
+    }
+
+    override func tearDownWithError() throws {
+        try? FileManager.default.removeItem(at: scratch)
+    }
+
+    func testIdentifyFixtures() throws {
+        XCTAssertEqual(service.identify(url: fixture("sample.png"))?.id, "png")
+        XCTAssertEqual(service.identify(url: fixture("sample.jpg"))?.id, "jpeg")
+        XCTAssertEqual(service.identify(url: fixture("sample.pdf"))?.id, "pdf")
+        XCTAssertEqual(service.identify(url: fixture("sample.json"))?.id, "json")
+    }
+
+    func testConvertPNGToJPEG() throws {
+        let source = fixture("sample.png")
+        let before = try checksum(source)
+        let spec = OutputSpec(mode: .convert, formatID: "jpeg", quality: 0.8, destinationDirectory: scratch)
+        let out = try service.convert(input: source, to: "jpeg", spec: spec)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: out.path))
+        XCTAssertTrue(isJPEG(out))
+        XCTAssertEqual(try checksum(source), before)
+        XCTAssertNotEqual(out.lastPathComponent, source.lastPathComponent)
+    }
+
+    func testConvertJPEGToPNG() throws {
+        let source = fixture("sample.jpg")
+        let before = try checksum(source)
+        let spec = OutputSpec(mode: .convert, formatID: "png", destinationDirectory: scratch)
+        let out = try service.convert(input: source, to: "png", spec: spec)
+        XCTAssertTrue(isPNG(out))
+        XCTAssertEqual(try checksum(source), before)
+    }
+
+    func testConvertPNGToPDF() throws {
+        let source = fixture("sample.png")
+        let spec = OutputSpec(mode: .convert, formatID: "pdf", destinationDirectory: scratch)
+        let out = try service.convert(input: source, to: "pdf", spec: spec)
+        XCTAssertTrue(isPDF(out))
+        let doc = try XCTUnwrap(PDFDocument(url: out))
+        XCTAssertGreaterThanOrEqual(doc.pageCount, 1)
+    }
+
+    func testConvertPDFPagesToPNG() throws {
+        let source = fixture("sample.pdf")
+        let spec = OutputSpec(mode: .convert, formatID: "png", destinationDirectory: scratch)
+        let out = try service.convert(input: source, to: "png", spec: spec)
+        XCTAssertTrue(isPNG(out))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
+    }
+
+    func testCompressJPEGIsSmaller() throws {
+        let source = fixture("sample.jpg")
+        let inputSize = try fileSize(source)
+        XCTAssertGreaterThan(inputSize, 50_000)
+        let spec = OutputSpec(mode: .compress, quality: 0.22, maxDimension: 1280, destinationDirectory: scratch)
+        let out = try service.compress(input: source, spec: spec)
+        XCTAssertTrue(isJPEG(out))
+        let outputSize = try fileSize(out)
+        XCTAssertLessThan(outputSize, inputSize, "compress should shrink \(outputSize) vs \(inputSize)")
+        XCTAssertEqual(try fileSize(source), inputSize)
+    }
+
+    func testCompressPNGSmallestIsSmaller() throws {
+        let source = fixture("sample.png")
+        let inputSize = try fileSize(source)
+        var spec = OutputSpec(mode: .compress, formatID: "jpeg", quality: KilnPreset.smallest.quality, maxDimension: KilnPreset.smallest.maxDimension, destinationDirectory: scratch)
+        let out = try service.compress(input: source, spec: spec)
+        let outputSize = try fileSize(out)
+        XCTAssertLessThan(outputSize, inputSize)
+        XCTAssertTrue(isJPEG(out) || isPNG(out))
+    }
+
+    func testCombineImagesToPDF() throws {
+        let png = fixture("sample.png")
+        let jpg = fixture("sample.jpg")
+        let spec = OutputSpec(mode: .combine, formatID: "pdf", destinationDirectory: scratch)
+        let out = try service.combine(inputs: [png, jpg], spec: spec)
+        XCTAssertTrue(isPDF(out))
+        let doc = try XCTUnwrap(PDFDocument(url: out))
+        XCTAssertGreaterThanOrEqual(doc.pageCount, 2)
+    }
+
+    func testSplitPDFProducesOneFilePerPage() throws {
+        let source = fixture("sample.pdf")
+        let doc = try XCTUnwrap(PDFDocument(url: source))
+        XCTAssertEqual(doc.pageCount, 2)
+        let spec = OutputSpec(mode: .split, formatID: "pdf", destinationDirectory: scratch)
+        let outs = try service.split(input: source, spec: spec)
+        XCTAssertEqual(outs.count, doc.pageCount)
+        for url in outs {
+            XCTAssertTrue(isPDF(url))
+            XCTAssertEqual(PDFDocument(url: url)?.pageCount, 1)
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
+    }
+
+    func testCombineOffersPDFAndZip() throws {
+        let png = try XCTUnwrap(service.identify(url: fixture("sample.png")))
+        let dests = ConversionGraph().destinations(from: png, mode: .combine)
+        XCTAssertTrue(dests.contains(where: { $0.id == "pdf" }))
+        XCTAssertTrue(dests.contains(where: { $0.id == "zip" }))
+    }
+
+    func testDestinationsAreRunnableOnly() throws {
+        let png = try XCTUnwrap(service.identify(url: fixture("sample.png")))
+        let dests = ConversionGraph().destinations(from: png, mode: .convert)
+        XCTAssertTrue(dests.contains(where: { $0.id == "jpeg" }))
+        XCTAssertTrue(dests.contains(where: { $0.id == "pdf" }))
+        XCTAssertFalse(dests.contains(where: { $0.id == "png" }))
+        for dest in dests {
+            XCTAssertTrue(dest.canWrite)
+        }
+    }
+
+    func testJSONToYAML() throws {
+        let source = fixture("sample.json")
+        let spec = OutputSpec(mode: .convert, formatID: "yaml", destinationDirectory: scratch)
+        let out = try service.convert(input: source, to: "yaml", spec: spec)
+        let text = try String(contentsOf: out, encoding: .utf8)
+        XCTAssertTrue(text.contains("hello"))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
+    }
+
+    func testShippedImportAcceptsFixturesWithoutCrashing() throws {
+        let png = fixture("sample.png")
+        let jpg = fixture("sample.jpg")
+        let pdf = fixture("sample.pdf")
+        let prepared = FileImport.prepare(
+            urls: [png, jpg, pdf, png],
+            already: [],
+            identify: { service.identify(url: $0) }
+        )
+        XCTAssertEqual(prepared.count, 3)
+        XCTAssertEqual(prepared[0].format?.id, "png")
+        XCTAssertEqual(prepared[1].format?.id, "jpeg")
+        XCTAssertEqual(prepared[2].format?.id, "pdf")
+        for pair in prepared {
+            XCTAssertTrue(FileManager.default.fileExists(atPath: pair.url.path))
+        }
+    }
+
+    func testCollectFilesFlattensDirectoryIteratively() throws {
+        let folder = scratch.appendingPathComponent("drop-folder")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: fixture("sample.png"), to: folder.appendingPathComponent("a.png"))
+        try FileManager.default.copyItem(at: fixture("sample.jpg"), to: folder.appendingPathComponent("b.jpg"))
+        let files = FileImport.collectFiles(from: [folder], already: [])
+        XCTAssertEqual(Set(files.map(\.lastPathComponent)), ["a.png", "b.jpg"])
+    }
+
+    func testResolveProviderItemAcceptsFileURLData() {
+        let file = fixture("sample.png")
+        XCTAssertEqual(FileImport.resolveProviderItem(file)?.path, file.path)
+        let data = file.dataRepresentation
+        XCTAssertEqual(FileImport.resolveProviderItem(data)?.path, file.path)
+        XCTAssertNil(FileImport.resolveProviderItem("not a path"))
+    }
+
+    func testDoesNotOverwriteOriginal() throws {
+        let source = fixture("sample.jpg")
+        let copy = scratch.appendingPathComponent("sample.jpg")
+        try FileManager.default.copyItem(at: source, to: copy)
+        let before = try checksum(copy)
+        let spec = OutputSpec(mode: .convert, formatID: "png", destinationDirectory: scratch)
+        let out = try service.convert(input: copy, to: "png", spec: spec)
+        XCTAssertNotEqual(out.path, copy.path)
+        XCTAssertEqual(try checksum(copy), before)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: copy.path))
+    }
+
+    func testLocaleCatalogComplete() throws {
+        let catalogURL = localizationCatalog()
+        let data = try Data(contentsOf: catalogURL)
+        let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        let strings = try XCTUnwrap(json["strings"] as? [String: Any])
+        XCTAssertFalse(strings.isEmpty)
+        let required = Set(AppLanguage.shippedCodes)
+        XCTAssertEqual(required.count, 30)
+        XCTAssertTrue(required.contains("pt-BR"))
+        XCTAssertTrue(required.contains("pt-PT"))
+        XCTAssertTrue(required.contains("zh-Hans"))
+        XCTAssertTrue(required.contains("zh-Hant"))
+        XCTAssertTrue(required.contains("ar"))
+        XCTAssertTrue(required.contains("he"))
+
+        var failures: [String] = []
+        for (key, raw) in strings {
+            guard let entry = raw as? [String: Any],
+                  let locs = entry["localizations"] as? [String: Any] else {
+                failures.append("\(key): missing localizations")
+                continue
+            }
+            for locale in required {
+                guard let payload = locs[locale] as? [String: Any] else {
+                    failures.append("\(key)/\(locale): missing")
+                    continue
+                }
+                if let unit = payload["stringUnit"] as? [String: Any] {
+                    let value = (unit["value"] as? String) ?? ""
+                    if value.isEmpty { failures.append("\(key)/\(locale): empty") }
+                } else if let variations = payload["variations"] as? [String: Any],
+                          let plural = variations["plural"] as? [String: Any] {
+                    guard let other = plural["other"] as? [String: Any],
+                          let unit = other["stringUnit"] as? [String: Any],
+                          let value = unit["value"] as? String, !value.isEmpty else {
+                        failures.append("\(key)/\(locale): empty plural")
+                        continue
+                    }
+                } else {
+                    failures.append("\(key)/\(locale): no value")
+                }
+            }
+            if key.contains("drop.title") || key == "drop.title" {
+                let en = stringValue(locs["en"] as? [String: Any])
+                let ptBR = stringValue(locs["pt-BR"] as? [String: Any])
+                let ptPT = stringValue(locs["pt-PT"] as? [String: Any])
+                let hans = stringValue(locs["zh-Hans"] as? [String: Any])
+                let hant = stringValue(locs["zh-Hant"] as? [String: Any])
+                XCTAssertNotEqual(ptBR, ptPT, "pt-BR must differ from pt-PT")
+                XCTAssertNotEqual(hans, hant, "zh-Hans must differ from zh-Hant")
+                XCTAssertNotEqual(en, hans)
+            }
+        }
+        XCTAssertTrue(failures.isEmpty, "Incomplete catalog:\n" + failures.prefix(40).joined(separator: "\n"))
+    }
+
+    func testFormatCodesUntranslated() {
+        XCTAssertEqual(FormatCatalog.shared.format(id: "jpeg")?.displayName, "JPEG")
+        XCTAssertEqual(FormatCatalog.shared.format(id: "pdf")?.displayName, "PDF")
+        XCTAssertEqual(FormatCatalog.shared.format(id: "heic")?.displayName, "HEIC")
+    }
+
+    func testImageWriteFlagClearsWhenDestinationUTIMissing() {
+        let webp = Format(
+            id: "webp",
+            displayName: "WebP",
+            utType: UTType("org.webmproject.webp") ?? UTType(filenameExtension: "webp") ?? .data,
+            extensions: ["webp"],
+            family: .image,
+            canRead: true,
+            canWrite: true,
+            requiresFFMPEG: false,
+            lossy: true
+        )
+        let png = Format(
+            id: "png",
+            displayName: "PNG",
+            utType: .png,
+            extensions: ["png"],
+            family: .image,
+            canRead: true,
+            canWrite: true,
+            requiresFFMPEG: false,
+            lossy: false
+        )
+        var list = [webp, png]
+        FormatCatalog.applyImageWriteCapabilities(&list, destIDs: ["public.png"])
+        XCTAssertFalse(list[0].canWrite, "WebP must not stay writable when ImageIO cannot encode it")
+        XCTAssertTrue(list[1].canWrite)
+    }
+
+    func testLiveCatalogImageWriteMatchesImageIO() {
+        let destIDs = FormatCatalog.imageDestinationIdentifiers()
+        let catalog = FormatCatalog.shared
+        for id in ["webp", "avif", "jpeg", "png", "heic"] {
+            guard let format = catalog.format(id: id) else { continue }
+            XCTAssertEqual(
+                format.canWrite,
+                destIDs.contains(format.utType.identifier),
+                "\(id) canWrite must follow CGImageDestination UTIs"
+            )
+        }
+        let png = try! XCTUnwrap(catalog.format(id: "png"))
+        let dests = ConversionGraph(catalog: catalog).destinations(from: png, mode: .convert)
+        if let webp = catalog.format(id: "webp"), !webp.canWrite {
+            XCTAssertFalse(dests.contains(where: { $0.id == "webp" }))
+        }
+        XCTAssertTrue(dests.allSatisfy(\.canWrite))
+    }
+
+    func testXLSXDestinationsMatchOfficeEngine() throws {
+        let xlsx = try XCTUnwrap(FormatCatalog.shared.format(id: "xlsx"))
+        let graph = ConversionGraph()
+        let dests = graph.destinations(from: xlsx, mode: .convert)
+        let ids = Set(dests.map(\.id))
+        XCTAssertEqual(Set(graph.convertTargetIDs(fromDocument: xlsx)), ["csv", "json", "tsv", "txt"])
+        XCTAssertTrue(ids.isSubset(of: ["csv", "json", "tsv", "txt"]))
+        XCTAssertTrue(ids.contains("csv"))
+        XCTAssertTrue(ids.contains("json"))
+        XCTAssertFalse(ids.contains("rtf"))
+        XCTAssertFalse(ids.contains("html"))
+        XCTAssertFalse(ids.contains("markdown"))
+        XCTAssertFalse(ids.contains("pdf"))
+        XCTAssertTrue(dests.allSatisfy(\.canWrite))
+    }
+
+    func testConvertRejectsDestinationGraphDoesNotOffer() throws {
+        let source = fixture("sample.json")
+        let spec = OutputSpec(mode: .convert, formatID: "docx", destinationDirectory: scratch)
+        XCTAssertThrowsError(try service.convert(input: source, to: "docx", spec: spec))
+    }
+
+    func testAudioDestinationsAreEncodable() throws {
+        let wav = try XCTUnwrap(FormatCatalog.shared.format(id: "wav"))
+        XCTAssertFalse(wav.canWrite)
+        let dests = ConversionGraph().destinations(from: wav, mode: .convert)
+        XCTAssertFalse(dests.contains(where: { $0.id == "wav" }))
+        XCTAssertFalse(dests.contains(where: { $0.id == "aiff" }))
+        XCTAssertFalse(dests.contains(where: { $0.id == "caf" }))
+        XCTAssertTrue(dests.contains(where: { $0.id == "m4a" }))
+        XCTAssertTrue(dests.allSatisfy(\.canWrite))
+        XCTAssertFalse(FormatCatalog.shared.format(id: "aiff")?.canWrite ?? true)
+        XCTAssertFalse(FormatCatalog.shared.format(id: "caf")?.canWrite ?? true)
+    }
+
+    func testImportIdentityKeyCollapsesPathVariants() {
+        let a = URL(fileURLWithPath: "/tmp/kiln-sample.png")
+        let b = URL(fileURLWithPath: "/tmp/./kiln-sample.png")
+        XCTAssertEqual(FileImport.identityKey(for: a), FileImport.identityKey(for: b))
+    }
+
+    func testImportURLsDedupesTheSameFile() {
+        let url = fixture("sample.png")
+        let duplicate = URL(fileURLWithPath: url.path + "/../" + url.lastPathComponent)
+        let unique = FileImport.uniqueNew(urls: [url, url, duplicate], already: [])
+        XCTAssertEqual(unique.count, 1, "one Finder drop / duplicate URL must not enqueue twice")
+        let again = FileImport.uniqueNew(urls: [url], already: unique)
+        XCTAssertTrue(again.isEmpty)
+    }
+
+    func testRTLLanguagesAreMarked() {
+        XCTAssertTrue(AppLanguage.ar.isRTL)
+        XCTAssertTrue(AppLanguage.he.isRTL)
+        XCTAssertFalse(AppLanguage.en.isRTL)
+        XCTAssertFalse(AppLanguage.ja.isRTL)
+    }
+
+    // MARK: - helpers
+
+    private func fixture(_ name: String) -> URL {
+        if let bundled = Bundle(for: KilnConversionTests.self).url(forResource: name, withExtension: nil) {
+            return bundled
+        }
+        if let bundled = Bundle(for: KilnConversionTests.self).url(forResource: (name as NSString).deletingPathExtension, withExtension: (name as NSString).pathExtension) {
+            return bundled
+        }
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let url = root.appendingPathComponent("Fixtures").appendingPathComponent(name)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path), "missing fixture \(url.path)")
+        return url
+    }
+
+    private func localizationCatalog() -> URL {
+        let bundle = Bundle(for: KilnConversionTests.self)
+        if let bundled = bundle.url(forResource: "Localizable.catalog", withExtension: "json") {
+            return bundled
+        }
+        if let bundled = bundle.url(forResource: "Localizable", withExtension: "catalog.json") {
+            return bundled
+        }
+        XCTFail("Localizable.catalog.json missing from test bundle")
+        return URL(fileURLWithPath: "/nonexistent")
+    }
+
+    private func checksum(_ url: URL) throws -> String {
+        let data = try Data(contentsOf: url)
+        return SHALike.hash(data)
+    }
+
+    private func fileSize(_ url: URL) throws -> Int {
+        try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? -1
+    }
+
+    private func isJPEG(_ url: URL) -> Bool {
+        guard let data = try? Data(contentsOf: url), data.count > 3 else { return false }
+        return data[0] == 0xFF && data[1] == 0xD8
+    }
+
+    private func isPNG(_ url: URL) -> Bool {
+        guard let data = try? Data(contentsOf: url), data.count > 4 else { return false }
+        return data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47
+    }
+
+    private func isPDF(_ url: URL) -> Bool {
+        guard let data = try? Data(contentsOf: url), data.count > 4 else { return false }
+        return data.starts(with: [0x25, 0x50, 0x44, 0x46])
+    }
+
+    private func stringValue(_ payload: [String: Any]?) -> String {
+        ((payload?["stringUnit"] as? [String: Any])?["value"] as? String) ?? ""
+    }
+}
+
+private enum SHALike {
+    static func hash(_ data: Data) -> String {
+        var hash: UInt64 = 14695981039346656037
+        for b in data {
+            hash ^= UInt64(b)
+            hash &*= 1099511628211
+        }
+        return String(hash, radix: 16)
+    }
+}
