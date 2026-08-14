@@ -4,7 +4,6 @@ import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
 import UserNotifications
-import QuickLookThumbnailing
 
 enum QueueStatus: Equatable, Sendable {
     case ready
@@ -415,14 +414,16 @@ final class AppModel: ObservableObject {
 
     private func loadThumbnail(for id: UUID, url: URL) {
         guard FileManager.default.fileExists(atPath: url.path) else { return }
-        let request = QLThumbnailGenerator.Request(fileAt: url, size: CGSize(width: 120, height: 120), scale: 2, representationTypes: .thumbnail)
-        QLThumbnailGenerator.shared.generateRepresentations(for: request) { [weak self] representation, _, _ in
-            guard let image = representation?.nsImage else { return }
-            Task { @MainActor in
-                if let idx = self?.items.firstIndex(where: { $0.id == id }) {
-                    self?.items[idx].thumbnail = image
-                }
-            }
+        Task.detached(priority: .utility) { [weak self] in
+            let image = ThumbnailLoader.make(at: url)
+            guard let image, let self else { return }
+            await self.applyThumbnail(id: id, image: image)
+        }
+    }
+
+    private func applyThumbnail(id: UUID, image: NSImage) {
+        if let idx = items.firstIndex(where: { $0.id == id }) {
+            items[idx].thumbnail = image
         }
     }
 

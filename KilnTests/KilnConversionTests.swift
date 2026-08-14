@@ -228,6 +228,43 @@ final class KilnConversionTests: XCTestCase {
         XCTAssertEqual(service.identify(url: owned[0])?.id, "png")
     }
 
+    @MainActor
+    func testDropEnqueueCopiesAndThumbnailsWithoutIsolationCrash() async throws {
+        let file = fixture("sample.jpg")
+        let provider = try XCTUnwrap(NSItemProvider(contentsOf: file))
+        let owned: [URL] = await withCheckedContinuation { continuation in
+            DropImport.enqueue([provider]) { urls in
+                continuation.resume(returning: urls)
+            }
+        }
+        XCTAssertEqual(owned.count, 1)
+        XCTAssertNotEqual(owned[0].standardizedFileURL.path, file.standardizedFileURL.path)
+        XCTAssertEqual(service.identify(url: owned[0])?.id, "jpeg")
+        let image = await Task.detached { ThumbnailLoader.make(at: owned[0]) }.value
+        XCTAssertNotNil(image)
+        XCTAssertGreaterThan(image?.size.width ?? 0, 0)
+    }
+
+    func testClaimThenThumbnailOffMainDoesNotCrash() throws {
+        let inbox = scratch.appendingPathComponent("thumb-inbox")
+        let owned = FileImport.claim(
+            [fixture("sample.png"), fixture("sample.jpg"), fixture("sample.pdf")],
+            into: inbox
+        )
+        XCTAssertEqual(owned.count, 3)
+        let exp = expectation(description: "thumbnails")
+        exp.expectedFulfillmentCount = owned.count
+        for url in owned {
+            DispatchQueue.global(qos: .userInitiated).async {
+                let image = ThumbnailLoader.make(at: url)
+                XCTAssertNotNil(image, url.lastPathComponent)
+                XCTAssertGreaterThan(image?.size.width ?? 0, 0)
+                exp.fulfill()
+            }
+        }
+        wait(for: [exp], timeout: 8)
+    }
+
     func testClaimFlattensFolderWhileAccessed() throws {
         let folder = scratch.appendingPathComponent("open-folder")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)

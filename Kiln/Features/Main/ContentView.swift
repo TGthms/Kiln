@@ -128,7 +128,7 @@ enum DropImport {
                 guard let url = FileImport.resolveProviderItem(item) else { return }
                 let owned = FileImport.claim([url], into: inbox)
                 guard !owned.isEmpty else { return }
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     onMain(owned)
                 }
             }
