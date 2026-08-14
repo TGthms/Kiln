@@ -10,6 +10,59 @@ enum FileImport {
         collectFiles(from: urls, already: already)
     }
 
+    static func defaultInbox() -> URL {
+        let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        let dir = root.appendingPathComponent("Kiln/Inbox", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    /// Copy `url` into `inbox` while any security scope is still valid.
+    /// Returns a sandbox-owned file the rest of the app can read later.
+    static func adoptIncoming(_ url: URL, into inbox: URL) -> URL? {
+        let accessed = url.startAccessingSecurityScopedResource()
+        defer {
+            if accessed { url.stopAccessingSecurityScopedResource() }
+        }
+        try? FileManager.default.createDirectory(at: inbox, withIntermediateDirectories: true)
+        let stem = url.deletingPathExtension().lastPathComponent
+        let ext = url.pathExtension
+        var dest = inbox.appendingPathComponent(url.lastPathComponent)
+        var n = 2
+        while FileManager.default.fileExists(atPath: dest.path) {
+            let name = ext.isEmpty ? "\(stem) \(n)" : "\(stem) \(n).\(ext)"
+            dest = inbox.appendingPathComponent(name)
+            n += 1
+        }
+        do {
+            try FileManager.default.copyItem(at: url, to: dest)
+            return dest
+        } catch {
+            if FileManager.default.isReadableFile(atPath: url.path) {
+                return url.standardizedFileURL
+            }
+            return nil
+        }
+    }
+
+    /// Flatten folders, copy each file into `inbox`, then identify. Safe after the drop callback returns.
+    static func ingest(
+        urls: [URL],
+        already: [URL],
+        inbox: URL,
+        identify: (URL) -> Format?
+    ) -> [(url: URL, format: Format?)] {
+        let collected = collectFiles(from: urls, already: [])
+        var adopted: [URL] = []
+        for url in collected {
+            if let safe = adoptIncoming(url, into: inbox) {
+                adopted.append(safe)
+            }
+        }
+        return prepare(urls: adopted, already: already, identify: identify)
+    }
+
     /// Iterative flatten. Never recurses, so a deep or cyclic folder cannot blow the stack.
     static func collectFiles(
         from urls: [URL],
@@ -77,5 +130,22 @@ enum FileImport {
         if trimmed.hasPrefix("file:"), let url = URL(string: trimmed) { return url }
         if trimmed.hasPrefix("/") { return URL(fileURLWithPath: trimmed) }
         return nil
+    }
+}
+
+enum ConversionReadiness {
+    static func canStart(
+        runnableCount: Int,
+        destinationID: String?,
+        mode: ConversionMode,
+        isRunning: Bool
+    ) -> Bool {
+        guard !isRunning, runnableCount > 0 else { return false }
+        switch mode {
+        case .compress:
+            return true
+        case .convert, .combine, .split:
+            return destinationID != nil
+        }
     }
 }

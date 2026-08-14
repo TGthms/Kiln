@@ -113,13 +113,19 @@ final class AppModel: ObservableObject {
     }
 
     var canRun: Bool {
-        !runnableItems.isEmpty && !isRunning && (mode == .compress || destinationFormatID != nil || mode == .combine || mode == .split)
+        ConversionReadiness.canStart(
+            runnableCount: runnableItems.count,
+            destinationID: destinationFormatID,
+            mode: mode,
+            isRunning: isRunning
+        )
     }
 
     func importURLs(_ urls: [URL]) {
-        let prepared = FileImport.prepare(
+        let prepared = FileImport.ingest(
             urls: urls,
             already: items.map(\.url),
+            inbox: FileImport.defaultInbox(),
             identify: { url in
                 service.identify(url: url)
             }

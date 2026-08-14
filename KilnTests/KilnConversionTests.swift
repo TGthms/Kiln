@@ -139,9 +139,11 @@ final class KilnConversionTests: XCTestCase {
         let png = fixture("sample.png")
         let jpg = fixture("sample.jpg")
         let pdf = fixture("sample.pdf")
-        let prepared = FileImport.prepare(
+        let inbox = scratch.appendingPathComponent("inbox")
+        let prepared = FileImport.ingest(
             urls: [png, jpg, pdf, png],
             already: [],
+            inbox: inbox,
             identify: { service.identify(url: $0) }
         )
         XCTAssertEqual(prepared.count, 3)
@@ -150,7 +152,26 @@ final class KilnConversionTests: XCTestCase {
         XCTAssertEqual(prepared[2].format?.id, "pdf")
         for pair in prepared {
             XCTAssertTrue(FileManager.default.fileExists(atPath: pair.url.path))
+            XCTAssertTrue(pair.url.path.contains("inbox"))
         }
+        let dests = service.destinations(for: prepared.map(\.url), mode: .convert)
+        XCTAssertFalse(dests.isEmpty)
+        XCTAssertTrue(
+            ConversionReadiness.canStart(
+                runnableCount: prepared.count,
+                destinationID: dests.first?.id,
+                mode: .convert,
+                isRunning: false
+            )
+        )
+        XCTAssertFalse(
+            ConversionReadiness.canStart(
+                runnableCount: prepared.count,
+                destinationID: dests.first?.id,
+                mode: .convert,
+                isRunning: true
+            )
+        )
     }
 
     func testCollectFilesFlattensDirectoryIteratively() throws {

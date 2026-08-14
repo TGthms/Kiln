@@ -8,23 +8,22 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             background
+                .allowsHitTesting(false)
             if model.workspace == .units {
                 UnitsView(model: model.units)
             } else if model.items.isEmpty {
                 DropZoneView(model: model)
+                    .onDrop(of: [.fileURL], isTargeted: $model.isDropTargeted, perform: handleDrop)
             } else {
                 HStack(spacing: 0) {
                     QueueView(model: model)
+                        .onDrop(of: [.fileURL], isTargeted: $model.isDropTargeted, perform: handleDrop)
                     InspectorView(model: model)
                 }
             }
         }
         .animation(reduceMotion ? .easeInOut(duration: 0.16) : KilnTheme.spring, value: model.items.isEmpty)
         .animation(reduceMotion ? .easeInOut(duration: 0.16) : KilnTheme.spring, value: model.units.sidebarVisible)
-        .onDrop(of: [.fileURL], isTargeted: $model.isDropTargeted) { providers in
-            handleDrop(providers)
-            return true
-        }
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Picker(selection: $model.workspace) {
@@ -84,13 +83,13 @@ struct ContentView: View {
                 model.settingsPresented = false
             }
         }
-        .focusable()
         .onDeleteCommand {
             if let id = model.selection {
                 model.remove(id)
             }
         }
         .onKeyPress(.space) {
+            guard model.workspace == .files else { return .ignored }
             model.previewSelection()
             return .handled
         }
@@ -108,25 +107,28 @@ struct ContentView: View {
         .ignoresSafeArea()
     }
 
-    /// Load file URLs only via `loadItem`. `loadObject(URL)` plus a later MainActor hop
-    /// lets the security scope expire and has crashed the app on drop.
-    private func handleDrop(_ providers: [NSItemProvider]) {
+    private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
+        DropImport.enqueue(providers) { urls in
+            model.importURLs(urls)
+        }
+        return true
+    }
+}
+
+enum DropImport {
+    /// Copy each dropped file into the inbox **on the provider callback thread**,
+    /// then hop to the main actor with only those copies.
+    static func enqueue(_ providers: [NSItemProvider], onMain: @escaping @MainActor ([URL]) -> Void) {
+        let inbox = FileImport.defaultInbox()
         for provider in providers {
             let type = [UTType.fileURL.identifier, "public.file-url"]
                 .first { provider.hasItemConformingToTypeIdentifier($0) }
                 ?? UTType.fileURL.identifier
             provider.loadItem(forTypeIdentifier: type, options: nil) { item, _ in
                 guard let url = FileImport.resolveProviderItem(item) else { return }
-                let accessed = url.startAccessingSecurityScopedResource()
-                let path = url.path
+                guard let adopted = FileImport.adoptIncoming(url, into: inbox) else { return }
                 DispatchQueue.main.async {
-                    let imported: URL
-                    if accessed {
-                        imported = url
-                    } else {
-                        imported = URL(fileURLWithPath: path)
-                    }
-                    model.importURLs([imported])
+                    onMain([adopted])
                 }
             }
         }

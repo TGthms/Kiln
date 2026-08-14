@@ -1,6 +1,6 @@
 import Foundation
 
-enum UnitCategory: String, CaseIterable, Identifiable, Sendable {
+enum UnitCategory: String, CaseIterable, Identifiable, Sendable, Hashable {
     case angle
     case area
     case currency

@@ -7,9 +7,9 @@ struct UnitsView: View {
         HStack(spacing: 0) {
             if model.sidebarVisible {
                 categoryList
-                    .transition(.move(edge: .leading).combined(with: .opacity))
             }
             converter
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .task {
             await model.refreshIfNeeded()
@@ -22,29 +22,30 @@ struct UnitsView: View {
     }
 
     private var categoryList: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 2) {
-                ForEach(UnitCategory.allCases) { category in
-                    Button {
-                        model.select(category: category)
-                    } label: {
-                        Text(LocalizedStringKey(category.localizationKey))
-                            .font(.system(size: 14, weight: model.category == category ? .semibold : .regular))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 9)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .fill(model.category == category ? KilnTheme.amber.opacity(0.18) : Color.clear)
-                            )
-                    }
-                    .buttonStyle(KilnPressStyle())
+        List(UnitCategory.allCases, selection: categoryBinding) { category in
+            Text(LocalizedStringKey(category.localizationKey))
+                .font(.system(size: 14, weight: model.category == category ? .semibold : .regular))
+                .tag(category)
+                .listRowBackground(
+                    model.category == category
+                        ? KilnTheme.amber.opacity(0.18)
+                        : Color.clear
+                )
+        }
+        .listStyle(.sidebar)
+        .frame(width: 220)
+        .accessibilityLabel(Text("units.sidebar"))
+    }
+
+    private var categoryBinding: Binding<UnitCategory?> {
+        Binding(
+            get: { model.category },
+            set: { newValue in
+                if let newValue {
+                    model.select(category: newValue)
                 }
             }
-            .padding(12)
-        }
-        .frame(width: 220)
-        .background(.thinMaterial)
+        )
     }
 
     private var converter: some View {
@@ -56,9 +57,7 @@ struct UnitsView: View {
             conversionCard(role: .from)
             HStack {
                 Spacer(minLength: 0)
-                Button {
-                    model.swap()
-                } label: {
+                Button(action: { model.swap() }) {
                     Label {
                         Text("units.swap")
                     } icon: {
@@ -67,26 +66,24 @@ struct UnitsView: View {
                     .font(.system(size: 15, weight: .medium))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
+                    .contentShape(Rectangle())
                 }
-                .buttonStyle(KilnPressStyle())
+                .buttonStyle(.plain)
                 .background(Color.primary.opacity(0.06), in: Capsule())
                 Spacer(minLength: 0)
             }
             conversionCard(role: .to)
 
-            HStack {
-                Button {
-                    model.copyResult()
-                } label: {
-                    Text("units.copy")
-                        .font(.system(size: 14, weight: .medium))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 7)
-                }
-                .buttonStyle(KilnPressStyle())
-                .disabled(model.result == nil)
-                Spacer()
+            Button(action: { model.copyResult() }) {
+                Text("units.copy")
+                    .font(.system(size: 14, weight: .medium))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .background(Color.primary.opacity(0.06), in: Capsule())
+            .disabled(model.result == nil)
 
             if model.category.isCurrency {
                 currencyFooter
@@ -107,23 +104,32 @@ struct UnitsView: View {
             HStack(spacing: 12) {
                 if role == .from {
                     TextField("1", text: $model.inputText)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 32, weight: .medium, design: .rounded))
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 28, weight: .medium, design: .rounded))
                         .controlSize(.large)
                 } else if let result = model.result {
                     Text(model.format(result))
-                        .font(.system(size: 32, weight: .semibold, design: .rounded))
+                        .font(.system(size: 28, weight: .semibold, design: .rounded))
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(8)
                 } else {
                     Text("—")
-                        .font(.system(size: 32, weight: .semibold, design: .rounded))
+                        .font(.system(size: 28, weight: .semibold, design: .rounded))
                         .foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                unitPicker(selection: role == .from ? $model.fromID : $model.toID)
-                    .controlSize(.large)
-                    .frame(minWidth: 140)
+                Picker(selection: role == .from ? $model.fromID : $model.toID) {
+                    ForEach(model.unitSpecs) { spec in
+                        Text(spec.symbol).tag(spec.id)
+                    }
+                } label: {
+                    Text(role == .from ? "units.from" : "units.to")
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .controlSize(.large)
+                .frame(minWidth: 140)
             }
             .padding(16)
             .background(
@@ -131,18 +137,6 @@ struct UnitsView: View {
                     .fill(Color.primary.opacity(0.05))
             )
         }
-    }
-
-    private func unitPicker(selection: Binding<String>) -> some View {
-        Picker(selection: selection) {
-            ForEach(model.unitSpecs) { spec in
-                Text(spec.symbol).tag(spec.id)
-            }
-        } label: {
-            EmptyView()
-        }
-        .labelsHidden()
-        .pickerStyle(.menu)
     }
 
     private var currencyFooter: some View {
@@ -164,6 +158,7 @@ struct UnitsView: View {
                         Text("units.refresh")
                     }
                 }
+                .buttonStyle(.bordered)
                 .controlSize(.large)
                 .keyboardShortcut("r", modifiers: [.command])
                 .disabled(model.isRefreshing)

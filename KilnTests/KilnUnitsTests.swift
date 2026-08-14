@@ -3,6 +3,31 @@ import Foundation
 @testable import Kiln
 
 final class KilnUnitsTests: XCTestCase {
+    @MainActor
+    func testSelectingCategoryChangesConverter() {
+        let model = UnitsModel(
+            fetcher: FixtureFetcher(data: Data("{}".utf8), fetchedAt: Date()),
+            cache: RateCache(fileURL: FileManager.default.temporaryDirectory.appendingPathComponent("kiln-unused-\(UUID().uuidString).json"))
+        )
+        XCTAssertEqual(model.category, .length)
+        model.select(category: .temperature)
+        XCTAssertEqual(model.category, .temperature)
+        XCTAssertEqual(model.fromID, "C")
+        XCTAssertEqual(model.toID, "F")
+        let temp = try? MeasurementEngine.convert(value: 32, category: model.category, from: "F", to: "C")
+        XCTAssertEqual(temp ?? -1, 0, accuracy: 0.0001)
+        model.select(category: .length)
+        XCTAssertEqual(model.category, .length)
+        XCTAssertEqual(model.fromID, "m")
+        XCTAssertEqual(model.toID, "km")
+        XCTAssertNotEqual(model.fromID, "C")
+        let beforeSwapFrom = model.fromID
+        let beforeSwapTo = model.toID
+        model.swap()
+        XCTAssertEqual(model.fromID, beforeSwapTo)
+        XCTAssertEqual(model.toID, beforeSwapFrom)
+    }
+
     func testLengthKilometersToMeters() throws {
         let meters = try MeasurementEngine.convert(value: 1, category: .length, from: "km", to: "m")
         XCTAssertEqual(meters, 1000, accuracy: 0.0001)

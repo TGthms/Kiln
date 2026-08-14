@@ -170,9 +170,10 @@ struct InspectorView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
         }
-        .buttonStyle(KilnPressStyle())
-        .background(KilnTheme.amber, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .foregroundStyle(.white)
+        .buttonStyle(.borderedProminent)
+        .tint(KilnTheme.amber)
+        .controlSize(.large)
+        .contentShape(Rectangle())
         .disabled(!model.canRun && !model.isRunning)
         .keyboardShortcut(.return, modifiers: [.command])
         .accessibilityLabel(Text(LocalizedStringKey(model.mode.actionKey)))
