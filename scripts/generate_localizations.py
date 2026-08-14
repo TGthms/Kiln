@@ -107,6 +107,8 @@ EN = {
     "units.auto_refresh": "Refresh exchange rates automatically",
     "settings.currency": "Currency",
     "settings.currency.privacy": "Exchange rates come from Frankfurter. No account. Amounts stay on this Mac.",
+    "settings.about": "About",
+    "settings.repo": "Kiln on GitHub",
     "category.angle": "Angle",
     "category.area": "Area",
     "category.currency": "Currency",

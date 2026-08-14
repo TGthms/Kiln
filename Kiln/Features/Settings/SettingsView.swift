@@ -1,5 +1,10 @@
 import SwiftUI
 
+enum KilnRepo {
+    static let url = URL(string: "https://github.com/TGthms/Kiln")!
+    static let displayHost = "github.com/TGthms/Kiln"
+}
+
 struct SettingsView: View {
     @ObservedObject var model: AppModel
     var showsDone: Bool = false
@@ -50,6 +55,24 @@ struct SettingsView: View {
                 } header: {
                     Text("settings.currency")
                 }
+
+                Section {
+                    Link(destination: KilnRepo.url) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("settings.repo")
+                                Text(KilnRepo.displayHost)
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("settings.about")
+                }
             }
             .formStyle(.grouped)
             .navigationTitle(Text("settings.title"))
@@ -66,7 +89,7 @@ struct SettingsView: View {
                 }
             }
         }
-        .frame(minWidth: 520, minHeight: 440)
+        .frame(minWidth: 520, minHeight: 500)
         .onChange(of: model.settings.language) { _, _ in model.persistSettings() }
         .onChange(of: model.settings.appearance) { _, _ in model.persistSettings() }
         .onChange(of: model.settings.destination) { _, _ in model.persistSettings() }
