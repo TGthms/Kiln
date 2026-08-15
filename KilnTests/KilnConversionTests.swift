@@ -540,6 +540,24 @@ final class KilnConversionTests: XCTestCase {
         XCTAssertTrue(again.isEmpty)
     }
 
+    func testCopyrightNamesTGthms() throws {
+        let data = try Data(contentsOf: localizationCatalog())
+        let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        let strings = try XCTUnwrap(json["strings"] as? [String: Any])
+        let entry = try XCTUnwrap(strings["settings.copyright"] as? [String: Any])
+        let locs = try XCTUnwrap(entry["localizations"] as? [String: Any])
+        let en = stringValue(locs["en"] as? [String: Any])
+        XCTAssertTrue(en.contains("TGthms"), "Settings copyright must name TGthms")
+        XCTAssertTrue(en.lowercased().contains("copyright"))
+        let plist = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Kiln/Resources/Info.plist")
+        let info = try XCTUnwrap(NSDictionary(contentsOf: plist))
+        let human = try XCTUnwrap(info["NSHumanReadableCopyright"] as? String)
+        XCTAssertTrue(human.contains("TGthms"))
+    }
+
     func testRTLLanguagesAreMarked() {
         XCTAssertTrue(AppLanguage.ar.isRTL)
         XCTAssertTrue(AppLanguage.he.isRTL)

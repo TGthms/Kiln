@@ -70,6 +70,9 @@ struct SettingsView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
+                    Text("settings.copyright")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
                 } header: {
                     Text("settings.about")
                 }

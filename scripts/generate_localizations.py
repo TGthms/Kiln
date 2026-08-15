@@ -109,6 +109,7 @@ EN = {
     "settings.currency.privacy": "Exchange rates come from Frankfurter. No account. Amounts stay on this Mac.",
     "settings.about": "About",
     "settings.repo": "Kiln on GitHub",
+    "settings.copyright": "Copyright © 2026 TGthms",
     "category.angle": "Angle",
     "category.area": "Area",
     "category.currency": "Currency",
@@ -138,6 +139,7 @@ INFO_EN = {
     "CFBundleDisplayName": "Kiln",
     "CFBundleName": "Kiln",
     "Convert with Kiln": "Convert with Kiln",
+    "NSHumanReadableCopyright": "Copyright © 2026 TGthms",
 }
 
 # locale -> {key: value}
@@ -1152,8 +1154,12 @@ def build_info() -> dict:
                 continue
             if key in ("CFBundleDisplayName", "CFBundleName"):
                 val = "Kiln"
-            else:
+            elif key == "NSHumanReadableCopyright":
+                val = en_val
+            elif key == "Convert with Kiln":
                 val = INFO_TR.get(locale, en_val)
+            else:
+                val = en_val
             loc[locale] = unit(val)
         strings[key] = {"localizations": loc}
     return {"sourceLanguage": "en", "strings": strings, "version": "1.0"}
