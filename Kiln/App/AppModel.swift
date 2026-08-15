@@ -56,7 +56,7 @@ final class AppModel: ObservableObject {
     static let shared = AppModel()
 
     @Published var items: [QueueItem] = []
-    @Published var selection: UUID?
+    @Published var selection: Set<UUID> = []
     @Published var mode: ConversionMode = .convert
     @Published var preset: KilnPreset = .original
     @Published var quality: Double = 0.85
@@ -92,11 +92,26 @@ final class AppModel: ObservableObject {
     }
 
     var selectedItem: QueueItem? {
-        items.first(where: { $0.id == selection }) ?? items.first
+        if let id = selection.first, let item = items.first(where: { $0.id == id }) {
+            return item
+        }
+        return items.first
+    }
+
+    var selectedItems: [QueueItem] {
+        items.filter { selection.contains($0.id) }
     }
 
     var runnableItems: [QueueItem] {
         items.filter { $0.status != .unsupported }
+    }
+
+    var eligibleItems: [QueueItem] {
+        items.filter { ConversionReadiness.isEligible($0.status) }
+    }
+
+    var itemsToProcess: [QueueItem] {
+        eligibleItems.filter { canProcess($0) }
     }
 
     var availableDestinations: [Format] {
@@ -105,7 +120,11 @@ final class AppModel: ObservableObject {
         case .combine:
             urls = runnableItems.map(\.url)
         case .convert, .compress, .split:
-            if let selected = selectedItem, selected.status != .unsupported {
+            let batch = eligibleItems.isEmpty ? runnableItems : eligibleItems
+            let common = service.destinations(for: batch.map(\.url), mode: mode)
+            if !common.isEmpty {
+                urls = batch.map(\.url)
+            } else if let selected = selectedItem, selected.status != .unsupported {
                 urls = [selected.url]
             } else {
                 urls = runnableItems.map(\.url)
@@ -124,11 +143,24 @@ final class AppModel: ObservableObject {
 
     var canRun: Bool {
         ConversionReadiness.canStart(
-            runnableCount: runnableItems.count,
+            runnableCount: itemsToProcess.count,
             destinationID: destinationFormatID,
             mode: mode,
             isRunning: isRunning
         )
+    }
+
+    func canProcess(_ item: QueueItem) -> Bool {
+        guard ConversionReadiness.isEligible(item.status) else { return false }
+        switch mode {
+        case .compress, .combine:
+            return true
+        case .convert, .split:
+            guard let destID = destinationFormatID,
+                  let dest = service.catalog.format(id: destID),
+                  let source = item.format else { return false }
+            return service.graph.canRun(from: source, to: dest, mode: mode)
+        }
     }
 
     func importURLs(_ urls: [URL]) {
@@ -150,26 +182,58 @@ final class AppModel: ObservableObject {
             loadThumbnail(for: item.id, url: pair.url)
         }
         items.append(contentsOf: added)
-        if selection == nil {
-            selection = items.first?.id
-        }
         if !added.isEmpty {
+            selection = Set(added.map(\.id))
             workspace = .files
+        } else if selection.isEmpty {
+            selection = Set(items.prefix(1).map(\.id))
         }
         reconcileDestination()
     }
 
     func remove(_ id: UUID) {
         items.removeAll { $0.id == id }
-        if selection == id {
-            selection = items.first?.id
+        selection.remove(id)
+        if selection.isEmpty {
+            selection = Set(items.prefix(1).map(\.id))
+        }
+        reconcileDestination()
+    }
+
+    func removeSelected() {
+        let ids = selection
+        guard !ids.isEmpty else { return }
+        items.removeAll { ids.contains($0.id) }
+        selection = Set(items.prefix(1).map(\.id))
+        if items.isEmpty { destinationFormatID = nil }
+        reconcileDestination()
+    }
+
+    func selectAll() {
+        selection = Set(items.map(\.id))
+    }
+
+    func removeFinished() {
+        items.removeAll { $0.status == .done }
+        selection.formIntersection(Set(items.map(\.id)))
+        if selection.isEmpty {
+            selection = Set(items.prefix(1).map(\.id))
+        }
+        reconcileDestination()
+    }
+
+    func retryFailed() {
+        for index in items.indices where items[index].status == .failed {
+            items[index].status = .ready
+            items[index].message = nil
+            items[index].progress = 0
         }
         reconcileDestination()
     }
 
     func clear() {
         items.removeAll()
-        selection = nil
+        selection = []
         destinationFormatID = nil
     }
 
@@ -285,7 +349,7 @@ final class AppModel: ObservableObject {
     ) async throws {
         for index in items.indices {
             if Task.isCancelled { return }
-            if items[index].status == .unsupported { continue }
+            guard canProcess(items[index]) else { continue }
             items[index].status = .converting
             items[index].progress = 0.15
             let url = items[index].url

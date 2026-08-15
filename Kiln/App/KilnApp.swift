@@ -20,11 +20,11 @@ struct KilnApp: App {
                 Button {
                     model.browse()
                 } label: {
-                    Text("drop.browse")
+                    Text("action.add")
                 }
                 .keyboardShortcut("o", modifiers: [.command])
             }
-            CommandMenu("Kiln") {
+            CommandGroup(after: .newItem) {
                 Button {
                     model.run()
                 } label: {
@@ -37,13 +37,63 @@ struct KilnApp: App {
                 } label: {
                     Text("action.cancel")
                 }
+                .keyboardShortcut(".", modifiers: [.command])
                 .disabled(!model.isRunning)
+            }
+            CommandGroup(after: .pasteboard) {
+                Button {
+                    model.selectAll()
+                } label: {
+                    Text("action.select_all")
+                }
+                .keyboardShortcut("a")
+                .disabled(model.workspace != .files || model.items.isEmpty)
+                Button {
+                    model.removeSelected()
+                } label: {
+                    Text("action.remove_selected")
+                }
+                .keyboardShortcut(.delete, modifiers: [.command])
+                .disabled(model.workspace != .files || model.selection.isEmpty)
+                Button {
+                    model.removeFinished()
+                } label: {
+                    Text("action.remove_finished")
+                }
+                .disabled(model.workspace != .files || !model.items.contains(where: { $0.status == .done }))
+                Button {
+                    model.retryFailed()
+                } label: {
+                    Text("action.retry_failed")
+                }
+                .keyboardShortcut("r", modifiers: [.command])
+                .disabled(model.workspace != .files || !model.items.contains(where: { $0.status == .failed }))
+                Button {
+                    model.clear()
+                } label: {
+                    Text("action.clear")
+                }
+                .disabled(model.workspace != .files || model.items.isEmpty)
+            }
+            CommandMenu("Kiln") {
+                Button {
+                    model.workspace = .files
+                } label: {
+                    Text("workspace.files")
+                }
+                .keyboardShortcut("1", modifiers: [.command])
+                Button {
+                    model.workspace = .units
+                } label: {
+                    Text("workspace.units")
+                }
+                .keyboardShortcut("2", modifiers: [.command])
                 Button {
                     Task { await model.units.refresh() }
                 } label: {
                     Text("units.refresh")
                 }
-                .keyboardShortcut("r", modifiers: [.command])
+                .keyboardShortcut("r", modifiers: [.command, .shift])
                 .disabled(model.workspace != .units || !model.units.category.isCurrency)
             }
         }

@@ -15,10 +15,11 @@ struct InspectorView: View {
                         Text(LocalizedStringKey(mode.localizationKey)).tag(mode)
                     }
                 } label: {
-                    EmptyView()
+                    Text("mode.convert")
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
+                .accessibilityLabel(Text("mode.convert"))
                 .onChange(of: model.mode) { _, _ in
                     model.reconcileDestination()
                 }
@@ -40,6 +41,8 @@ struct InspectorView: View {
                         } label: {
                             Text("inspector.destination")
                         }
+                        .accessibilityLabel(Text("inspector.destination"))
+                        .accessibilityValue(Text(model.destinationFormatID ?? ""))
                     }
                 } header: {
                     Text("inspector.destination")
@@ -60,10 +63,13 @@ struct InspectorView: View {
                     HStack {
                         Text("inspector.quality")
                         Slider(value: $model.quality, in: 0.1...1)
+                            .accessibilityLabel(Text("inspector.quality"))
+                            .accessibilityValue(Text("\(Int(model.quality * 100))%"))
                         Text("\(Int(model.quality * 100))%")
                             .foregroundStyle(.secondary)
                             .monospacedDigit()
                             .frame(width: 40, alignment: .trailing)
+                            .accessibilityHidden(true)
                     }
                 }
 
@@ -95,7 +101,7 @@ struct InspectorView: View {
                     if model.isRunning {
                         Text("action.cancel")
                     } else {
-                        Text(LocalizedStringKey(model.mode.actionKey))
+                        Text(batchActionTitle)
                     }
                 }
                 .buttonStyle(.borderedProminent)
@@ -103,7 +109,8 @@ struct InspectorView: View {
                 .disabled(!model.canRun && !model.isRunning)
                 .keyboardShortcut(.return, modifiers: [.command])
                 .accessibilityLabel(Text(LocalizedStringKey(model.mode.actionKey)))
-                .accessibilityValue(Text(model.destinationFormatID ?? ""))
+                .accessibilityValue(Text(batchActionTitle))
+                .accessibilityHint(Text("inspector.destination"))
             }
         }
         .formStyle(.grouped)
@@ -141,7 +148,17 @@ struct InspectorView: View {
             Spacer(minLength: 0)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text("inspector.preview"))
+        .accessibilityLabel(Text(model.selectedItem?.url.lastPathComponent ?? "inspector.preview"))
+        .accessibilityHint(Text("inspector.preview"))
+    }
+
+    private var batchActionTitle: String {
+        let action = L10n.string(model.mode.actionKey, locale: model.settings.locale)
+        let count = model.itemsToProcess.count
+        if count > 1 {
+            return "\(action) · \(count)"
+        }
+        return action
     }
 
     private var presetBinding: Binding<KilnPreset> {

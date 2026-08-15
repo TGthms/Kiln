@@ -36,6 +36,7 @@ struct ContentView: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(minWidth: 200)
+                .accessibilityLabel(Text("workspace.files"))
             }
             ToolbarItemGroup(placement: .primaryAction) {
                 if model.workspace == .units {
@@ -49,18 +50,42 @@ struct ContentView: View {
                         }
                     }
                     .help(Text("units.sidebar"))
+                    .accessibilityLabel(Text("units.sidebar"))
                 }
 
-                Button {
-                    model.browse()
-                } label: {
-                    Label {
-                        Text("drop.browse")
-                    } icon: {
-                        Image(systemName: "folder")
+                if model.workspace == .files {
+                    Button {
+                        model.browse()
+                    } label: {
+                        Label {
+                            Text("action.add")
+                        } icon: {
+                            Image(systemName: "plus")
+                        }
                     }
+                    .help(Text("action.add"))
+                    .accessibilityLabel(Text("action.add"))
+                    .accessibilityHint(Text("drop.subtitle"))
+
+                    Button {
+                        if model.isRunning {
+                            model.cancel()
+                        } else {
+                            model.run()
+                        }
+                    } label: {
+                        Label {
+                            Text(LocalizedStringKey(model.isRunning ? "action.cancel" : model.mode.actionKey))
+                        } icon: {
+                            Image(systemName: model.isRunning ? "stop.fill" : "play.fill")
+                        }
+                    }
+                    .disabled(!model.canRun && !model.isRunning)
+                    .help(Text(LocalizedStringKey(model.mode.actionKey)))
+                    .accessibilityLabel(Text(LocalizedStringKey(model.mode.actionKey)))
+                    .accessibilityValue(Text("\(model.itemsToProcess.count)"))
+                    .keyboardShortcut(.return, modifiers: [.command])
                 }
-                .help(Text("drop.browse"))
 
                 Button {
                     openSettings()
@@ -72,12 +97,11 @@ struct ContentView: View {
                     }
                 }
                 .help(Text("action.settings"))
+                .accessibilityLabel(Text("action.settings"))
             }
         }
         .onDeleteCommand {
-            if let id = model.selection {
-                model.remove(id)
-            }
+            model.removeSelected()
         }
         .onKeyPress(.space) {
             guard model.workspace == .files else { return .ignored }

@@ -540,6 +540,60 @@ final class KilnConversionTests: XCTestCase {
         XCTAssertTrue(again.isEmpty)
     }
 
+    func testBatchEligibilitySkipsFinishedAndUnsupported() {
+        XCTAssertTrue(ConversionReadiness.isEligible(.ready))
+        XCTAssertTrue(ConversionReadiness.isEligible(.failed))
+        XCTAssertFalse(ConversionReadiness.isEligible(.done))
+        XCTAssertFalse(ConversionReadiness.isEligible(.converting))
+        XCTAssertFalse(ConversionReadiness.isEligible(.unsupported))
+        XCTAssertTrue(
+            ConversionReadiness.canStart(runnableCount: 3, destinationID: "png", mode: .convert, isRunning: false)
+        )
+        XCTAssertFalse(
+            ConversionReadiness.canStart(runnableCount: 0, destinationID: "png", mode: .convert, isRunning: false)
+        )
+    }
+
+    func testBatchOfSameTypeSharesConvertDestination() throws {
+        let folder = scratch.appendingPathComponent("batch-album")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: fixture("sample.jpg"), to: folder.appendingPathComponent("a.jpg"))
+        try FileManager.default.copyItem(at: fixture("sample.jpg"), to: folder.appendingPathComponent("b.jpg"))
+        let owned = FileImport.claim(
+            [folder.appendingPathComponent("a.jpg"), folder.appendingPathComponent("b.jpg")],
+            into: scratch.appendingPathComponent("batch-inbox")
+        )
+        XCTAssertEqual(owned.count, 2)
+        let dests = service.destinations(for: owned, mode: .convert)
+        XCTAssertFalse(dests.isEmpty)
+        XCTAssertTrue(dests.contains(where: { $0.id == "png" }))
+        XCTAssertTrue(
+            ConversionReadiness.canStart(
+                runnableCount: owned.count,
+                destinationID: dests.first?.id,
+                mode: .convert,
+                isRunning: false
+            )
+        )
+    }
+
+    @MainActor
+    func testSelectAllThenRemoveSelectedClearsQueue() throws {
+        let model = AppModel()
+        model.clear()
+        let folder = scratch.appendingPathComponent("select-album")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: fixture("sample.jpg"), to: folder.appendingPathComponent("a.jpg"))
+        try FileManager.default.copyItem(at: fixture("sample.png"), to: folder.appendingPathComponent("b.png"))
+        model.importURLs([folder.appendingPathComponent("a.jpg"), folder.appendingPathComponent("b.png")])
+        XCTAssertEqual(model.items.count, 2)
+        model.selectAll()
+        XCTAssertEqual(model.selection.count, 2)
+        model.removeSelected()
+        XCTAssertTrue(model.items.isEmpty)
+        XCTAssertTrue(model.selection.isEmpty)
+    }
+
     func testCopyrightNamesTGthms() throws {
         let data = try Data(contentsOf: localizationCatalog())
         let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]

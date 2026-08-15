@@ -50,6 +50,7 @@ struct UnitsView: View {
                         .textFieldStyle(.roundedBorder)
                         .font(.title.weight(.regular).monospacedDigit())
                         .controlSize(.large)
+                        .accessibilityLabel(Text("units.from"))
                     Picker(selection: $model.fromID) {
                         ForEach(model.unitSpecs) { spec in
                             Text(spec.symbol).tag(spec.id)
@@ -58,6 +59,7 @@ struct UnitsView: View {
                         Text("units.from")
                     }
                     .labelsHidden()
+                    .accessibilityLabel(Text("units.from"))
                     .frame(minWidth: 88)
                 }
             } header: {
@@ -97,6 +99,7 @@ struct UnitsView: View {
                         Text("units.to")
                     }
                     .labelsHidden()
+                    .accessibilityLabel(Text("units.to"))
                     .frame(minWidth: 88)
                 }
             } header: {

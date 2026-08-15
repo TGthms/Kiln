@@ -42,8 +42,9 @@ struct DropZoneView: View {
                 .allowsHitTesting(false)
         }
         .animation(reduceMotion ? .easeInOut(duration: 0.12) : KilnTheme.spring, value: model.isDropTargeted)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel(Text("drop.title"))
         .accessibilityHint(Text("drop.subtitle"))
+        .accessibilityAddTraits(model.isDropTargeted ? [.updatesFrequently] : [])
     }
 }

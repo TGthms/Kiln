@@ -275,6 +275,13 @@ enum FileImport {
 }
 
 enum ConversionReadiness {
+    static func isEligible(_ status: QueueStatus) -> Bool {
+        switch status {
+        case .ready, .failed: return true
+        case .done, .converting, .unsupported: return false
+        }
+    }
+
     static func canStart(
         runnableCount: Int,
         destinationID: String?,
