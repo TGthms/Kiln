@@ -18,9 +18,33 @@ enum FileImport {
         return dir
     }
 
+    enum Intent: Sendable {
+        /// Never walk a directory. A parent-folder URL is ignored unless `suggestedName` names one file inside it.
+        case filesOnly
+        /// Flatten real folders the user selected. Packages (.pages, .app) stay one item.
+        case allowFolders
+    }
+
     static func isDirectory(_ url: URL) -> Bool {
         var isDir: ObjCBool = false
         return FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) && isDir.boolValue
+    }
+
+    static func isPackage(_ url: URL) -> Bool {
+        if (try? url.resourceValues(forKeys: [.isPackageKey]))?.isPackage == true {
+            return true
+        }
+        let ext = url.pathExtension.lowercased()
+        return Self.packageExtensions.contains(ext)
+    }
+
+    private static let packageExtensions: Set<String> = [
+        "pages", "key", "numbers", "app", "rtfd", "download", "bundle", "photoslibrary",
+    ]
+
+    /// A folder we may walk. Packages are files.
+    static func isFlattenableDirectory(_ url: URL) -> Bool {
+        isDirectory(url) && !isPackage(url)
     }
 
     static func canonicalize(_ url: URL) -> URL {
@@ -30,31 +54,34 @@ enum FileImport {
         return URL(fileURLWithPath: url.path).standardizedFileURL
     }
 
+    static func looksLikeFileName(_ name: String?) -> Bool {
+        let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !trimmed.isEmpty, !trimmed.hasSuffix("/") else { return false }
+        return !(trimmed as NSString).pathExtension.isEmpty
+    }
+
     /// Finder sometimes hands the parent folder plus `suggestedName` for a single-file drop.
-    /// Keep only that file. An explicit folder drop (name matches the directory) stays a folder.
+    /// With a file-like name, keep only that file. Never return the parent folder for a file drop.
     static func narrowToDroppedFile(_ url: URL, suggestedName: String?) -> URL {
         let url = canonicalize(url)
-        guard isDirectory(url) else { return url }
+        guard isFlattenableDirectory(url) else { return url }
         let name = suggestedName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !name.isEmpty else { return url }
-        if url.lastPathComponent.compare(name, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame {
-            return url
-        }
         let candidate = url.appendingPathComponent(name)
-        if FileManager.default.isReadableFile(atPath: candidate.path), !isDirectory(candidate) {
+        if FileManager.default.isReadableFile(atPath: candidate.path), !isFlattenableDirectory(candidate) {
             return candidate
         }
         return url
     }
 
     /// If the batch contains both a file and its parent folder, drop the folder so siblings
-    /// are not imported. Folder-only batches still flatten.
+    /// are not imported. Folder-only batches still flatten when intent allows.
     static func withoutDirectoryAncestors(_ urls: [URL]) -> [URL] {
         let canon = urls.map(canonicalize)
-        let files = canon.filter { !isDirectory($0) }
+        let files = canon.filter { !isFlattenableDirectory($0) }
         guard !files.isEmpty else { return canon }
         let filePaths = files.map(\.path)
-        let dirs = canon.filter { isDirectory($0) }.filter { dir in
+        let dirs = canon.filter { isFlattenableDirectory($0) }.filter { dir in
             let prefix = dir.path.hasSuffix("/") ? dir.path : dir.path + "/"
             return !filePaths.contains { $0.hasPrefix(prefix) }
         }
@@ -69,13 +96,27 @@ enum FileImport {
 
     /// Copy incoming files into `inbox` **now**, while Open/drop/Services scopes are valid.
     /// Never returns an original or scoped URL — only sandbox-owned copies.
-    /// A regular file is one item. Folders flatten only when the URL itself is a directory.
-    static func claim(_ urls: [URL], into inbox: URL? = nil, maxDepth: Int = 6, maxCount: Int = 400) -> [URL] {
+    /// `filesOnly` never walks a directory. `allowFolders` flattens only real folders, not packages.
+    static func claim(
+        _ urls: [URL],
+        into inbox: URL? = nil,
+        intent: Intent = .filesOnly,
+        suggestedName: String? = nil,
+        maxDepth: Int = 6,
+        maxCount: Int = 400
+    ) -> [URL] {
         let box = inbox ?? defaultInbox()
         try? FileManager.default.createDirectory(at: box, withIntermediateDirectories: true)
         var claimed: [URL] = []
         var seen = Set<String>()
-        var queue: [(URL, Int)] = withoutDirectoryAncestors(urls).map { ($0, 0) }
+        let incoming = withoutDirectoryAncestors(urls).map { url -> URL in
+            if intent == .filesOnly {
+                let narrowed = narrowToDroppedFile(url, suggestedName: suggestedName)
+                return narrowed
+            }
+            return url
+        }
+        var queue: [(URL, Int)] = incoming.map { ($0, 0) }
         var index = 0
         let fm = FileManager.default
         while index < queue.count {
@@ -92,7 +133,10 @@ enum FileImport {
 
             guard fm.fileExists(atPath: url.path) else { continue }
 
-            if isDirectory(url) {
+            if isFlattenableDirectory(url) {
+                if intent == .filesOnly {
+                    continue
+                }
                 seen.insert(key)
                 guard depth < maxDepth else { continue }
                 let kids = (try? fm.contentsOfDirectory(
@@ -143,18 +187,33 @@ enum FileImport {
         inbox: URL,
         identify: (URL) -> Format?
     ) -> [(url: URL, format: Format?)] {
-        let owned = claim(urls, into: inbox)
-        return prepare(urls: owned, already: already, identify: identify)
+        let owned = claim(urls, into: inbox, intent: .filesOnly)
+        let alreadyKeys = Set(already.map(identityKey(for:)))
+        return owned.compactMap { url -> (url: URL, format: Format?)? in
+            guard !isFlattenableDirectory(url) else { return nil }
+            let key = identityKey(for: url)
+            if alreadyKeys.contains(key) { return nil }
+            return (url, identify(url))
+        }
     }
 
     /// Sandbox-owned copy only. On any copy failure, return nil — never the original.
+    /// Never returns a directory (including the inbox root).
     static func copyOwned(_ url: URL, into inbox: URL) -> URL? {
         try? FileManager.default.createDirectory(at: inbox, withIntermediateDirectories: true)
         let inboxPath = inbox.standardizedFileURL.path
         let sourcePath = url.standardizedFileURL.path
-        if sourcePath == inboxPath || sourcePath.hasPrefix(inboxPath + "/") {
-            guard FileManager.default.isReadableFile(atPath: sourcePath) else { return nil }
+        if sourcePath == inboxPath {
+            return nil
+        }
+        if sourcePath.hasPrefix(inboxPath + "/") {
+            guard FileManager.default.isReadableFile(atPath: sourcePath), !isFlattenableDirectory(url) else {
+                return nil
+            }
             return url.standardizedFileURL
+        }
+        if isFlattenableDirectory(url) {
+            return nil
         }
         let dest = uniqueInboxURL(for: url, inbox: inbox)
         do {

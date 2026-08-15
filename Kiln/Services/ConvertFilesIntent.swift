@@ -16,7 +16,7 @@ struct ConvertFilesIntent: AppIntent {
             try? file.data.write(to: temp)
             return temp
         }
-        let owned = FileImport.claim(incoming)
+        let owned = FileImport.claim(incoming, intent: .allowFolders)
         await MainActor.run {
             AppModel.shared.importURLs(owned)
         }

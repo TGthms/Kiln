@@ -186,8 +186,47 @@ final class KilnConversionTests: XCTestCase {
         let claimedCollapsed = FileImport.claim([folder, one], into: scratch.appendingPathComponent("collapse-inbox"))
         XCTAssertEqual(claimedCollapsed.count, 1)
 
-        let folderDrop = FileImport.claim([folder], into: scratch.appendingPathComponent("folder-inbox"))
+        let parentAsFileDrop = FileImport.claim(
+            [folder],
+            into: scratch.appendingPathComponent("parent-as-file"),
+            intent: .filesOnly
+        )
+        XCTAssertTrue(parentAsFileDrop.isEmpty, "a file drop that only has the parent folder must not import siblings")
+
+        let parentWithName = FileImport.claim(
+            [folder],
+            into: scratch.appendingPathComponent("parent-named"),
+            intent: .filesOnly,
+            suggestedName: "photo.jpg"
+        )
+        XCTAssertEqual(parentWithName.count, 1)
+        XCTAssertEqual(parentWithName[0].lastPathComponent, "photo.jpg")
+
+        let folderDrop = FileImport.claim(
+            [folder],
+            into: scratch.appendingPathComponent("folder-inbox"),
+            intent: .allowFolders
+        )
         XCTAssertEqual(folderDrop.count, 4, "explicit folder drop still flattens")
+    }
+
+    func testIngestOneInboxFileDoesNotPullInboxSiblings() throws {
+        let inbox = scratch.appendingPathComponent("polluted-inbox")
+        try FileManager.default.createDirectory(at: inbox, withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: fixture("sample.jpg"), to: inbox.appendingPathComponent("keep.jpg"))
+        try FileManager.default.copyItem(at: fixture("sample.png"), to: inbox.appendingPathComponent("sibling.png"))
+        try FileManager.default.copyItem(at: fixture("sample.pdf"), to: inbox.appendingPathComponent("sibling.pdf"))
+        let one = inbox.appendingPathComponent("keep.jpg")
+        let prepared = FileImport.ingest(
+            urls: [one],
+            already: [],
+            inbox: inbox,
+            identify: { service.identify(url: $0) }
+        )
+        XCTAssertEqual(prepared.count, 1)
+        XCTAssertEqual(prepared[0].url.lastPathComponent, "keep.jpg")
+        XCTAssertEqual(prepared[0].format?.id, "jpeg")
+        XCTAssertNil(FileImport.copyOwned(inbox, into: inbox), "must never adopt the inbox directory")
     }
 
     func testConvertAfterSingleFileImportWritesNewFormat() throws {
@@ -345,7 +384,7 @@ final class KilnConversionTests: XCTestCase {
         try FileManager.default.copyItem(at: fixture("sample.png"), to: folder.appendingPathComponent("a.png"))
         try FileManager.default.copyItem(at: fixture("sample.jpg"), to: folder.appendingPathComponent("b.jpg"))
         let inbox = scratch.appendingPathComponent("folder-inbox")
-        let owned = FileImport.claim([folder], into: inbox)
+        let owned = FileImport.claim([folder], into: inbox, intent: .allowFolders)
         XCTAssertEqual(Set(owned.map(\.lastPathComponent)), ["a.png", "b.jpg"])
         XCTAssertTrue(owned.allSatisfy { $0.path.hasPrefix(inbox.path) })
         XCTAssertEqual(service.identify(url: owned.first { $0.pathExtension == "png" }!)?.id, "png")

@@ -27,7 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
-        let owned = FileImport.claim(urls)
+        let owned = FileImport.claim(urls, intent: .allowFolders)
         Task { @MainActor in
             AppModel.shared.importURLs(owned)
         }
@@ -38,7 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func convertWithKiln(_ pboard: NSPasteboard, userData: String, error: NSErrorPointer) {
-        let owned = FileImport.claim(ServiceImport.urls(from: pboard))
+        let owned = FileImport.claim(ServiceImport.urls(from: pboard), intent: .allowFolders)
         guard !owned.isEmpty else { return }
         Task { @MainActor in
             NSApp.activate(ignoringOtherApps: true)

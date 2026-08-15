@@ -328,7 +328,7 @@ final class AppModel: ObservableObject {
         panel.allowsMultipleSelection = true
         panel.begin { [weak self] result in
             guard result == .OK else { return }
-            let owned = FileImport.claim(panel.urls)
+            let owned = FileImport.claim(panel.urls, intent: .allowFolders)
             Task { @MainActor in
                 self?.importURLs(owned)
             }

@@ -128,32 +128,45 @@ enum DropImport {
         }
     }
 
+    private static func isExplicitFolder(_ provider: NSItemProvider) -> Bool {
+        let folder = provider.hasItemConformingToTypeIdentifier(UTType.folder.identifier)
+            || provider.hasItemConformingToTypeIdentifier(UTType.directory.identifier)
+        guard folder else { return false }
+        return !FileImport.looksLikeFileName(provider.suggestedName)
+    }
+
     private static func deliver(
         _ provider: NSItemProvider,
         inbox: URL,
         onMain: @escaping @MainActor ([URL]) -> Void
     ) {
         let suggested = provider.suggestedName
+        let folderDrop = isExplicitFolder(provider)
         let finish: (URL) -> Void = { url in
             let target = FileImport.narrowToDroppedFile(url, suggestedName: suggested)
-            let owned = FileImport.claim([target], into: inbox)
+            let intent: FileImport.Intent = folderDrop ? .allowFolders : .filesOnly
+            let owned = FileImport.claim([target], into: inbox, intent: intent, suggestedName: suggested)
             guard !owned.isEmpty else { return }
             Task { @MainActor in
                 onMain(owned)
             }
         }
 
-        if provider.canLoadObject(ofClass: URL.self) {
-            _ = provider.loadObject(ofClass: URL.self) { url, _ in
-                if let url {
-                    finish(url)
-                    return
-                }
-                loadItem(provider, finish: finish)
-            }
+        if folderDrop {
+            loadItem(provider, finish: finish)
             return
         }
-        loadItem(provider, finish: finish)
+
+        let fileType = provider.registeredTypeIdentifiers.first { id in
+            id != UTType.folder.identifier && id != UTType.directory.identifier
+        } ?? UTType.item.identifier
+        provider.loadFileRepresentation(forTypeIdentifier: fileType) { url, _ in
+            if let url {
+                finish(url)
+                return
+            }
+            loadItem(provider, finish: finish)
+        }
     }
 
     private static func loadItem(_ provider: NSItemProvider, finish: @escaping (URL) -> Void) {
