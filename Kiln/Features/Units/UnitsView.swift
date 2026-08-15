@@ -7,6 +7,7 @@ struct UnitsView: View {
         HStack(spacing: 0) {
             if model.sidebarVisible {
                 categoryList
+                    .frame(minWidth: 180, idealWidth: 200, maxWidth: 240)
             }
             converter
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -24,16 +25,9 @@ struct UnitsView: View {
     private var categoryList: some View {
         List(UnitCategory.allCases, selection: categoryBinding) { category in
             Text(LocalizedStringKey(category.localizationKey))
-                .font(.system(size: 14, weight: model.category == category ? .semibold : .regular))
                 .tag(category)
-                .listRowBackground(
-                    model.category == category
-                        ? KilnTheme.amber.opacity(0.18)
-                        : Color.clear
-                )
         }
         .listStyle(.sidebar)
-        .frame(width: 220)
         .accessibilityLabel(Text("units.sidebar"))
     }
 
@@ -49,125 +43,115 @@ struct UnitsView: View {
     }
 
     private var converter: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text(LocalizedStringKey(model.category.localizationKey))
-                .font(.system(size: 26, weight: .semibold))
-                .tracking(-0.4)
+        Form {
+            Section {
+                HStack {
+                    TextField("1", text: $model.inputText)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.title.weight(.regular).monospacedDigit())
+                        .controlSize(.large)
+                    Picker(selection: $model.fromID) {
+                        ForEach(model.unitSpecs) { spec in
+                            Text(spec.symbol).tag(spec.id)
+                        }
+                    } label: {
+                        Text("units.from")
+                    }
+                    .labelsHidden()
+                    .frame(minWidth: 88)
+                }
+            } header: {
+                Text("units.from")
+            }
 
-            conversionCard(role: .from)
-            HStack {
-                Spacer(minLength: 0)
-                Button(action: { model.swap() }) {
+            Section {
+                Button {
+                    model.swap()
+                } label: {
                     Label {
                         Text("units.swap")
                     } icon: {
                         Image(systemName: "arrow.up.arrow.down")
                     }
-                    .font(.system(size: 15, weight: .medium))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
-                .background(Color.primary.opacity(0.06), in: Capsule())
-                Spacer(minLength: 0)
             }
-            conversionCard(role: .to)
 
-            Button(action: { model.copyResult() }) {
-                Text("units.copy")
-                    .font(.system(size: 14, weight: .medium))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 7)
-                    .contentShape(Rectangle())
+            Section {
+                HStack {
+                    Group {
+                        if let result = model.result {
+                            Text(model.format(result))
+                                .textSelection(.enabled)
+                        } else {
+                            Text("—")
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .font(.title.weight(.regular).monospacedDigit())
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Picker(selection: $model.toID) {
+                        ForEach(model.unitSpecs) { spec in
+                            Text(spec.symbol).tag(spec.id)
+                        }
+                    } label: {
+                        Text("units.to")
+                    }
+                    .labelsHidden()
+                    .frame(minWidth: 88)
+                }
+            } header: {
+                Text("units.to")
             }
-            .buttonStyle(.plain)
-            .background(Color.primary.opacity(0.06), in: Capsule())
-            .disabled(model.result == nil)
+
+            Section {
+                Button {
+                    model.copyResult()
+                } label: {
+                    Text("units.copy")
+                }
+                .disabled(model.result == nil)
+            }
 
             if model.category.isCurrency {
-                currencyFooter
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-
-    private enum RowRole { case from, to }
-
-    private func conversionCard(role: RowRole) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(role == .from ? "units.from" : "units.to")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.secondary)
-            HStack(spacing: 12) {
-                if role == .from {
-                    TextField("1", text: $model.inputText)
-                        .textFieldStyle(.roundedBorder)
-                        .font(.system(size: 28, weight: .medium, design: .rounded))
-                        .controlSize(.large)
-                } else if let result = model.result {
-                    Text(model.format(result))
-                        .font(.system(size: 28, weight: .semibold, design: .rounded))
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(8)
-                } else {
-                    Text("—")
-                        .font(.system(size: 28, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.tertiary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                Section {
+                    currencyFooter
                 }
-                Picker(selection: role == .from ? $model.fromID : $model.toID) {
-                    ForEach(model.unitSpecs) { spec in
-                        Text(spec.symbol).tag(spec.id)
-                    }
-                } label: {
-                    Text(role == .from ? "units.from" : "units.to")
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .controlSize(.large)
-                .frame(minWidth: 140)
             }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color.primary.opacity(0.05))
-            )
         }
+        .formStyle(.grouped)
+        .frame(maxWidth: 520)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     private var currencyFooter: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 if let label = model.lastUpdatedLabel {
                     Text("units.updated") + Text(" ") + Text(label)
                 }
                 if model.isStale {
                     Text("units.stale")
-                        .foregroundStyle(KilnTheme.amber)
+                        .foregroundStyle(.orange)
                 }
+                Spacer(minLength: 0)
                 Button {
                     Task { await model.refresh() }
                 } label: {
                     if model.isRefreshing {
-                        ProgressView().controlSize(.small)
+                        ProgressView()
+                            .controlSize(.small)
                     } else {
                         Text("units.refresh")
                     }
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-                .keyboardShortcut("r", modifiers: [.command])
                 .disabled(model.isRefreshing)
+                .keyboardShortcut("r", modifiers: [.command])
             }
-            .font(.system(size: 13))
+            .font(.caption)
             .foregroundStyle(.secondary)
             if let error = model.errorMessage {
                 Text(error)
-                    .font(.system(size: 12))
+                    .font(.caption)
                     .foregroundStyle(.red)
             }
         }

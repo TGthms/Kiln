@@ -50,7 +50,7 @@ struct SettingsView: View {
                         Text("units.auto_refresh")
                     }
                     Text("settings.currency.privacy")
-                        .font(.system(size: 12))
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 } header: {
                     Text("settings.currency")
@@ -62,7 +62,7 @@ struct SettingsView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("settings.repo")
                                 Text(KilnRepo.displayHost)
-                                    .font(.system(size: 12))
+                                    .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
@@ -71,7 +71,7 @@ struct SettingsView: View {
                         }
                     }
                     Text("settings.copyright")
-                        .font(.system(size: 12))
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 } header: {
                     Text("settings.about")

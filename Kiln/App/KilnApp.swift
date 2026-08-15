@@ -8,14 +8,13 @@ struct KilnApp: App {
     var body: some Scene {
         Window("Kiln", id: "main") {
             ContentView(model: model)
-                .frame(minWidth: 1100, minHeight: 700)
+                .frame(minWidth: 780, minHeight: 520)
                 .environment(\.locale, model.settings.locale)
                 .environment(\.layoutDirection, model.settings.layoutDirection)
                 .preferredColorScheme(model.settings.appearance.colorScheme)
         }
-        .windowStyle(.hiddenTitleBar)
         .windowToolbarStyle(.unified)
-        .defaultSize(width: 1280, height: 820)
+        .defaultSize(width: 980, height: 680)
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button {

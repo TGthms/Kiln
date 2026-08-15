@@ -4,42 +4,31 @@ struct QueueView: View {
     @ObservedObject var model: AppModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text(fileCountLabel)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Button {
-                    model.clear()
-                } label: {
-                    Text("action.clear")
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-
-            ScrollView {
-                LazyVStack(spacing: 6) {
-                    ForEach(model.items) { item in
-                        QueueRow(item: item, selected: model.selection == item.id)
-                            .onTapGesture { model.selection = item.id }
-                            .contextMenu {
-                                Button("action.remove") { model.remove(item.id) }
-                                if let out = item.outputURL {
-                                    Button("action.reveal") { model.reveal(out) }
-                                }
-                            }
+        List(model.items, selection: $model.selection) { item in
+            QueueRow(item: item)
+                .tag(item.id)
+                .contextMenu {
+                    Button("action.remove") { model.remove(item.id) }
+                    if let out = item.outputURL {
+                        Button("action.reveal") { model.reveal(out) }
                     }
                 }
-                .padding(.horizontal, 10)
-                .padding(.bottom, 16)
-            }
         }
-        .frame(minWidth: 360)
-        .background(.thinMaterial)
+        .listStyle(.sidebar)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            HStack {
+                Text(fileCountLabel)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 8)
+                Button("action.clear") {
+                    model.clear()
+                }
+                .controlSize(.small)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+        }
     }
 
     private var fileCountLabel: String {
@@ -50,54 +39,41 @@ struct QueueView: View {
 
 struct QueueRow: View {
     var item: QueueItem
-    var selected: Bool
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             thumbnail
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(item.url.lastPathComponent)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.body)
                     .lineLimit(1)
                 HStack(spacing: 6) {
                     if let format = item.format {
                         Text(format.displayName)
-                            .font(.system(size: 11, weight: .semibold))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(KilnTheme.amber.opacity(0.16), in: Capsule())
+                            .foregroundStyle(.secondary)
                     }
                     Text(LocalizedStringKey(item.status.localizationKey))
-                        .font(.system(size: 11))
                         .foregroundStyle(statusColor)
                     if item.status == .done, let out = item.outputBytes {
                         Text(sizeLine(in: item.inputBytes, out: out))
-                            .font(.system(size: 11, design: .rounded))
-                            .foregroundStyle(out < item.inputBytes ? KilnTheme.amber : .secondary)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
                     }
                 }
+                .font(.caption)
                 if let message = item.message, item.status == .failed {
                     Text(message)
-                        .font(.system(size: 11))
+                        .font(.caption)
                         .foregroundStyle(.red)
                         .lineLimit(2)
                 }
                 if item.status == .converting {
                     ProgressView(value: item.progress)
-                        .progressViewStyle(.linear)
+                        .controlSize(.small)
                 }
             }
-            Spacer(minLength: 0)
         }
-        .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(selected ? KilnTheme.amber.opacity(0.14) : Color.primary.opacity(0.03))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(selected ? KilnTheme.amber.opacity(0.45) : Color.clear, lineWidth: 1)
-        )
+        .padding(.vertical, 2)
     }
 
     @ViewBuilder
@@ -109,16 +85,17 @@ struct QueueRow: View {
                     .scaledToFill()
             } else {
                 Image(systemName: "doc")
+                    .font(.body)
                     .foregroundStyle(.secondary)
             }
         }
-        .frame(width: 44, height: 44)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .frame(width: 36, height: 36)
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 
     private var statusColor: Color {
         switch item.status {
-        case .done: return KilnTheme.amber
+        case .done: return .secondary
         case .failed: return .red
         case .unsupported: return .secondary
         case .converting: return .primary

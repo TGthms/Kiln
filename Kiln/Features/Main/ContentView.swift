@@ -4,26 +4,27 @@ import UniformTypeIdentifiers
 struct ContentView: View {
     @ObservedObject var model: AppModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
-        ZStack {
-            background
-                .allowsHitTesting(false)
+        Group {
             if model.workspace == .units {
                 UnitsView(model: model.units)
             } else if model.items.isEmpty {
                 DropZoneView(model: model)
                     .onDrop(of: [.fileURL], isTargeted: $model.isDropTargeted, perform: handleDrop)
             } else {
-                HStack(spacing: 0) {
+                NavigationSplitView {
                     QueueView(model: model)
-                        .onDrop(of: [.fileURL], isTargeted: $model.isDropTargeted, perform: handleDrop)
+                        .navigationSplitViewColumnWidth(min: 220, ideal: 280, max: 400)
+                } detail: {
                     InspectorView(model: model)
                 }
+                .onDrop(of: [.fileURL], isTargeted: $model.isDropTargeted, perform: handleDrop)
             }
         }
-        .animation(reduceMotion ? .easeInOut(duration: 0.16) : KilnTheme.spring, value: model.items.isEmpty)
-        .animation(reduceMotion ? .easeInOut(duration: 0.16) : KilnTheme.spring, value: model.units.sidebarVisible)
+        .animation(reduceMotion ? .easeInOut(duration: 0.15) : KilnTheme.spring, value: model.items.isEmpty)
+        .animation(reduceMotion ? .easeInOut(duration: 0.15) : KilnTheme.spring, value: model.units.sidebarVisible)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Picker(selection: $model.workspace) {
@@ -31,11 +32,10 @@ struct ContentView: View {
                         Text(LocalizedStringKey(mode.localizationKey)).tag(mode)
                     }
                 } label: {
-                    EmptyView()
+                    Text("workspace.files")
                 }
                 .pickerStyle(.segmented)
-                .controlSize(.large)
-                .frame(minWidth: 280)
+                .frame(minWidth: 200)
             }
             ToolbarItemGroup(placement: .primaryAction) {
                 if model.workspace == .units {
@@ -48,7 +48,6 @@ struct ContentView: View {
                             Image(systemName: "sidebar.leading")
                         }
                     }
-                    .controlSize(.large)
                     .help(Text("units.sidebar"))
                 }
 
@@ -61,11 +60,10 @@ struct ContentView: View {
                         Image(systemName: "folder")
                     }
                 }
-                .controlSize(.large)
                 .help(Text("drop.browse"))
 
                 Button {
-                    model.settingsPresented = true
+                    openSettings()
                 } label: {
                     Label {
                         Text("action.settings")
@@ -73,14 +71,7 @@ struct ContentView: View {
                         Image(systemName: "gearshape")
                     }
                 }
-                .controlSize(.large)
                 .help(Text("action.settings"))
-                .keyboardShortcut(",", modifiers: [.command])
-            }
-        }
-        .sheet(isPresented: $model.settingsPresented) {
-            SettingsView(model: model, showsDone: true) {
-                model.settingsPresented = false
             }
         }
         .onDeleteCommand {
@@ -93,18 +84,6 @@ struct ContentView: View {
             model.previewSelection()
             return .handled
         }
-    }
-
-    private var background: some View {
-        LinearGradient(
-            colors: [
-                Color(nsColor: .windowBackgroundColor),
-                KilnTheme.ember.opacity(0.08)
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .ignoresSafeArea()
     }
 
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
